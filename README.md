@@ -1,18 +1,23 @@
 # 🚀 Johnny Moon Trader Bot
 
-A tactical crypto trading bot designed for fast, risk-managed, and confident entries — with live position and price monitoring. Built for degens who trade smart. LFG. 🌕
+A tactical crypto trading bot designed for fast, risk-managed, and confident entries — with live price monitoring and position tracking. Built for degens who trade smart. LFG. 🌕
+
+---
 
 ## 🧠 Features
 
 ### ✅ Core Tools
 - **Manual Multi-Trade Entry Script**  
-  Open multiple trades (BTC, ETH, alts) in one go, using USD-based sizing with automatic SL & leverage rules.
+  Open multiple trades (BTC, ETH, alts) in one go, using USD-based sizing with automatic SL & leverage.
 
-- **Live Price + PnL Monitor**  
-  Tracks open positions, wallet balance, unrealized PnL, and risk exposure.
+- **Live Price Monitor**  
+  See real-time prices, 24h change, and volume for top coins.
 
-- **15-Min Telegram Position Alerts** *(Optional)*  
-  Sends live updates to your Telegram bot with PnL per trade, wallet value, and risk summary.
+- **Live Position Tracker**  
+  Track open positions, wallet value, unrealized PnL, and risk exposure per trade.
+
+- **15-Min Telegram Updates** *(optional)*  
+  Get regular position snapshots via Telegram bot.
 
 ---
 
@@ -24,12 +29,13 @@ A tactical crypto trading bot designed for fast, risk-managed, and confident ent
 | ETH         | 20x      | 2.5%      |
 | Altcoins    | 20x      | 3.5%      |
 
-Includes max USD per trade cap and total wallet risk protection.
+Includes max USD-per-trade cap and wallet-level risk protection.
 
 ---
 
 ## 📦 Directory Structure
 
+```
 johnny-moon-trader-bot/
 ├── trade/
 │ └── open_trades.py # Open multiple trades via Binance
@@ -44,7 +50,7 @@ johnny-moon-trader-bot/
 ├── .env.example # Sample config (Telegram + Binance keys)
 ├── requirements.txt # Python dependencies
 └── README.md
-
+```
 
 ---
 
@@ -58,15 +64,32 @@ cd johnny-moon-trader-bot
 
 ```
 
-### 2. Install dependencies
+### 2. Create and Activate a Virtual Environment
+
+```bash
+# Windows
+python -m venv venv
+.\venv\Scripts\activate
+
+# macOS/Linux
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### 3. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Create your .env file
+🔁 To update later:
+pip freeze > requirements.txt
 
-```env
+### 4. Add Your API Keys
+
+Create a `.env` file based on .env.example:
+
+```
 # .env
 BINANCE_API_KEY=your_key
 BINANCE_API_SECRET=your_secret
@@ -76,7 +99,15 @@ TELEGRAM_CHAT_ID=your_chat_id
 ```
 ### 4. Configure your coins
 
-Edit config/coins.json to define each symbol’s leverage and stop-loss percent.
+Edit `config/coins.json` to define each symbol’s leverage and stop-loss percent.
+
+```json
+{
+  "BTCUSDT": { "leverage": 25, "sl_percent": 2.0 },
+  "ETHUSDT": { "leverage": 20, "sl_percent": 2.5 },
+  "SOLUSDT": { "leverage": 20, "sl_percent": 3.5 }
+}
+```
 
 ## 🛠️ Usage
 
@@ -94,14 +125,22 @@ You'll be prompted to enter:
 
 - Confirmation before executing
 
-### 📡 Monitor Prices & Positions
+### 📈 Monitor Prices
 
 ```bash
 python monitor/price_monitor.py
 ```
 
-Prints wallet value, unrealized PnL, risk per trade.
+### 📊 Monitor Positions & PnL
 
-### 🕐 Automated 15min PnL Telegram Alerts (optional)
+```bash
+python monitor/position_monitor.py
+```
 
-Set up GitHub Actions using the included .github/workflows/monitor.yml to run position_monitor.py every 15 minutes and send Telegram updates.
+### ☁️ GitHub Actions (Optional)
+
+The `.github/workflows/monitor.yaml` file can be configured to:
+
+- Run position_monitor.py every 15 minutes
+
+- Send live updates to Telegram
