@@ -7,6 +7,7 @@ A tactical crypto trading bot designed for fast, risk-managed, and confident ent
 ## 🧠 Features
 
 ### ✅ Core Tools
+
 - **Manual Multi-Trade Entry Script**  
   Open multiple trades (BTC, ETH, alts) in one go, using USD-based sizing with automatic SL & leverage.
 
@@ -97,6 +98,7 @@ BINANCE_API_SECRET=your_secret
 TELEGRAM_BOT_TOKEN=bot_token
 TELEGRAM_CHAT_ID=your_chat_id
 ```
+
 ### 4. Configure your coins
 
 Edit `config/coins.json` to define each symbol’s leverage and stop-loss percent.
