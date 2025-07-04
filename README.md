@@ -16,7 +16,8 @@ A tactical crypto trading bot designed for fast, risk-managed, and confident ent
   Color-coded for clarity.
 
 - **Live Position Tracker**  
-  Track open positions, wallet value, unrealized PnL, and risk exposure per trade.
+  Track open positions with wallet balance, used margin, PnL, %PnL, and risk exposure per trade.  
+  Table auto-sorted by your config list.
 
 - **15-Min Telegram Updates** *(optional)*  
   Get regular position snapshots via Telegram bot.
@@ -150,6 +151,32 @@ It shows:
 
 ```bash
 python monitor/position_monitor.py
+```
+
+Shows:
+
+- Wallet balance
+
+- Total unrealized PnL
+
+- Colorized risk table with per-trade metrics
+
+- Only open positions are shown. Auto-sorted by your coins.json order.
+
+Example Output:
+
+```yaml
+💰 Wallet Balance: $1,123.15
+📊 Total Unrealized PnL: +290.29
+
+╒══════════════╤════════╤═══════════╤═══════════╤═════════════════════╤═══════════════════════╤════════╤════════╤═════════╕
+│ Symbol       │ Side   │     Entry │      Mark │   Used Margin (USD) │   Position Size (USD) │    PnL │ PnL%   │ Risk%   │
+╞══════════════╪════════╪═══════════╪═══════════╪═════════════════════╪═══════════════════════╪════════╪════════╪═════════╡
+│ BTCUSDT      │ SHORT  │ 110032    │ 109265    │              598.77 │              14969.3  │ 105.08 │ +0.70% │ 53.31%  │
+│ ETHUSDT      │ SHORT  │   2616.17 │   2580.28 │              598.11 │              11962.2  │ 166.2  │ +1.37% │ 53.25%  │
+│ ...          │ ...    │    ...    │    ...    │               ...    │                 ...    │ ...    │  ...   │  ...    │
+╘══════════════╧════════╧═══════════╧═══════════╧═════════════════════╧═══════════════════════╧════════╧════════╧═════════╛
+
 ```
 
 ### ☁️ GitHub Actions (Optional)
