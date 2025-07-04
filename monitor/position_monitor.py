@@ -1,130 +1,133 @@
 import os
+import json
+import time
 from dotenv import load_dotenv
 from binance.client import Client
 from tabulate import tabulate
-from colorama import Fore, Style, init
-import requests
-import json
 
-init(autoreset=True)
+# Load environment variables
 load_dotenv()
-
-# Load Binance and Telegram keys
 API_KEY = os.getenv("BINANCE_API_KEY")
 API_SECRET = os.getenv("BINANCE_API_SECRET")
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-
-with open("config/coins.json") as f:
-    COIN_ORDER = list(json.load(f).keys())
 
 client = Client(API_KEY, API_SECRET)
 
-def color_pnl(pnl):
-    if pnl > 0:
-        return Fore.GREEN + f"{pnl:.2f}" + Style.RESET_ALL
-    elif pnl < 0:
-        return Fore.RED + f"{pnl:.2f}" + Style.RESET_ALL
-    else:
-        return f"{pnl:.2f}"
+# Load coin configuration
+with open("config/coins.json") as f:
+    COINS_CONFIG = json.load(f)
+    COIN_ORDER = list(COINS_CONFIG.keys())
 
-def color_pnl_pct(pct):
+def colorize(value, threshold=0):
     try:
-        pct_value = float(pct)
+        value = float(value)
+        if value > threshold:
+            return f"\033[92m{value:+.2f}%\033[0m"
+        elif value < -threshold:
+            return f"\033[91m{value:+.2f}%\033[0m"
+        else:
+            return f"\033[93m{value:+.2f}%\033[0m"
     except:
-        return pct
-    if pct_value > 0:
-        return Fore.GREEN + f"{pct_value:+.2f}%" + Style.RESET_ALL
-    elif pct_value < 0:
-        return Fore.RED + f"{pct_value:+.2f}%" + Style.RESET_ALL
+        return value
+
+def color_distance_pct(pct):
+    if pct < 1:
+        return f"\033[91m{pct:.2f}%\033[0m"  # red: <1% to SL
+    elif pct < 3:
+        return f"\033[93m{pct:.2f}%\033[0m"  # yellow: <3%
     else:
-        return f"{pct_value:+.2f}%"
+        return f"\033[92m{pct:.2f}%\033[0m"  # green
+
+def get_wallet_balance():
+    balances = client.futures_account_balance()
+    for b in balances:
+        if b["asset"] == "USDT":
+            wallet_balance = float(b["balance"])
+            unrealized = float(b.get("crossUnPnl", 0))
+            return wallet_balance, unrealized
+    return 0.0, 0.0
+
+def get_stop_loss_for_symbol(symbol):
+    try:
+        orders = client.futures_get_open_orders(symbol=symbol)
+        for o in orders:
+            if o["type"] in ("STOP_MARKET", "STOP") and o.get("reduceOnly"):
+                return float(o["stopPrice"])
+    except:
+        pass
+    return None
 
 def fetch_open_positions():
-    positions = client.futures_account()['positions']
-    account_balances = client.futures_account_balance()
-
-    # Find USDT wallet info
-    usdt_balance_info = next((item for item in account_balances if item['asset'] == 'USDT'), None)
-    if not usdt_balance_info:
-        raise Exception("USDT balance not found in account.")
-
-    wallet_balance = float(usdt_balance_info['balance'])
-    total_pnl = 0
+    positions = client.futures_position_information()
     filtered = []
+    wallet_balance, _ = get_wallet_balance()
 
     for pos in positions:
-        amt = float(pos['positionAmt'])
-        if abs(amt) > 0:
-            symbol = pos['symbol']
-            entry_price = float(pos['entryPrice'])
-            mark_price = float(client.futures_mark_price(symbol=symbol)['markPrice'])
-            side = "LONG" if amt > 0 else "SHORT"
-            qty = abs(amt)
-            leverage = int(pos['leverage'])
-            pnl = float(pos.get('unrealizedProfit', 0.0))
-            total_pnl += pnl
+        symbol = pos["symbol"]
+        if symbol not in COINS_CONFIG:
+            continue
 
-            position_size = qty * mark_price  # Total notional value
-            used_margin = position_size / leverage  # Capital at risk
-            pnl_pct = (pnl / (qty * entry_price)) * 100 if entry_price > 0 else 0
-            risk_pct = (used_margin / wallet_balance) * 100 if wallet_balance > 0 else 0
+        position_amt = float(pos["positionAmt"])
+        if position_amt == 0:
+            continue
 
-            filtered.append([
-                symbol,
-                side,
-                round(entry_price, 2),
-                round(mark_price, 2),
-                round(used_margin, 2),
-                round(position_size, 2),
-                color_pnl(pnl),
-                color_pnl_pct(pnl_pct),
-                f"{risk_pct:.2f}%"
-            ])
+        entry_price = float(pos["entryPrice"])
+        mark_price = float(pos["markPrice"])
+        notional = abs(float(pos["notional"]))
+        margin_used = float(pos.get("positionInitialMargin", 0)) or 1e-6  # avoid div by zero
 
-    # Sort filtered based on COIN_ORDER
-    sorted_positions = sorted(
-        filtered,
-        key=lambda x: COIN_ORDER.index(x[0]) if x[0] in COIN_ORDER else float('inf')
-    )
+        leverage = notional / margin_used
+        side = "LONG" if position_amt > 0 else "SHORT"
+        position_size = notional
+        pnl = float(pos.get("unRealizedProfit", 0))
+        pnl_pct = (pnl / margin_used) * 100
 
-    return sorted_positions, wallet_balance, total_pnl
+        sl_percent = COINS_CONFIG[symbol]["sl_percent"]
+        if side == "LONG":
+            sl_price = entry_price * (1 - sl_percent / 100)
+            pct_to_sl = ((mark_price - sl_price) / sl_price) * 100
+        else:
+            sl_price = entry_price * (1 + sl_percent / 100)
+            pct_to_sl = ((sl_price - mark_price) / sl_price) * 100
+
+        actual_sl = get_stop_loss_for_symbol(symbol)
+        actual_sl_str = f"{actual_sl:.5f}" if actual_sl else "-"
+
+        filtered.append([
+            symbol,
+            side,
+            round(entry_price, 5),
+            round(mark_price, 5),
+            round(margin_used, 2),
+            round(position_size, 2),
+            round(pnl, 2),
+            colorize(pnl_pct),
+            f"{(margin_used / wallet_balance) * 100:.2f}%",
+            actual_sl_str,
+            color_distance_pct(pct_to_sl)
+        ])
+
+    filtered.sort(key=lambda row: COIN_ORDER.index(row[0]) if row[0] in COIN_ORDER else 999)
+    return filtered
+
 
 def display_table():
-    positions, wallet_balance, total_pnl = fetch_open_positions()
+    table = fetch_open_positions()
+    wallet, unrealized = get_wallet_balance()
+
+    print(f"\n💰 Wallet Balance: ${wallet:,.2f}")
+    print(f"📊 Total Unrealized PnL: {round(unrealized, 2):,.2f}\n")
 
     headers = [
         "Symbol", "Side", "Entry", "Mark",
         "Used Margin (USD)", "Position Size (USD)",
-        "PnL", "PnL%", "Risk%"
+        "PnL", "PnL%", "Risk%", "SL Price", "% to SL"
     ]
+    print(tabulate(table, headers=headers, tablefmt="fancy_grid", numalign="right", stralign="left"))
 
-    print(f"💰 Wallet Balance: ${wallet_balance:,.2f}")
-    print(f"📊 Total Unrealized PnL: {color_pnl(total_pnl)}\n")
-    print(tabulate(positions, headers=headers, tablefmt="fancy_grid"))
-    return positions, wallet_balance
-
-def send_telegram_message(message):
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": TELEGRAM_CHAT_ID,
-        "text": message,
-        "parse_mode": "Markdown"
-    }
-    response = requests.post(url, data=payload)
-    if not response.ok:
-        print("❌ Failed to send Telegram message:", response.text)
-
-def format_table_for_telegram(raw_table, wallet):
-    msg = f"📊 *Position Update*\n\n💼 Wallet Balance: `${wallet:.2f}`\n\n"
-    msg += "```\n" + raw_table + "\n```"
-    return msg
 
 def main():
-    table, wallet = display_table()
-    # if table:
-    #     message = format_table_for_telegram(table, wallet)
-    #     send_telegram_message(message)
+    os.system("cls" if os.name == "nt" else "clear")
+    display_table()
 
 if __name__ == "__main__":
     main()
