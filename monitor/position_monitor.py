@@ -104,7 +104,11 @@ def fetch_open_positions(sort_by="default", descending=True):
         notional = abs(float(pos["notional"]))
         margin = float(pos.get("positionInitialMargin", 0)) or 1e-6
 
-        side = "LONG" if amt > 0 else "SHORT"
+        side_text = "LONG" if amt > 0 else "SHORT"
+        side_colored = (
+            f"\033[92m{side_text}\033[0m" if amt > 0 else f"\033[91m{side_text}\033[0m"
+        )
+
         pnl = float(pos.get("unRealizedProfit", 0))
         pnl_pct = (pnl / margin) * 100
         leverage = round(notional / margin)
@@ -112,7 +116,7 @@ def fetch_open_positions(sort_by="default", descending=True):
         actual_sl = get_stop_loss_for_symbol(symbol)
 
         if actual_sl:
-            if side == "SHORT":
+            if side_text == "SHORT":
                 sl_percent = (entry - actual_sl) / entry * 100
             else:  # SHORT
                 sl_percent = (actual_sl - entry) / entry * 100
@@ -131,13 +135,13 @@ def fetch_open_positions(sort_by="default", descending=True):
 
         row = [
             symbol,  # 0
-            side,  # 1
+            side_colored,  # 1
             leverage,  # 2
             round(entry, 5),  # 3
             round(mark, 5),  # 4
             round(margin, 2),  # 5
             round(notional, 2),  # 6
-            round(pnl, 2),  # 7
+            colorize_dollar(pnl),  # 7
             colorize(pnl_pct),  # 8
             f"{(margin / wallet_balance) * 100:.2f}%",  # 9
             actual_sl_str,  # 10
