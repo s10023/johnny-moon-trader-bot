@@ -28,6 +28,17 @@ def colorize(value, threshold=0):
     except:
         return value
 
+def colorize_dollar(value):
+    try:
+        value = float(value)
+        if value > 0:
+            return f"\033[92m${value:,.2f}\033[0m"
+        elif value < 0:
+            return f"\033[91m-${abs(value):,.2f}\033[0m"
+        else:
+            return f"\033[93m$0.00\033[0m"
+    except:
+        return f"${value}"
 
 def color_sl_size(pct):
     if pct < 2:
@@ -41,9 +52,9 @@ def color_sl_size(pct):
 def color_risk_usd(value, total_balance):
     pct = (value / total_balance * 100) if total_balance else 0
     formatted = f"${value:,.2f} ({pct:.2f}%)"
-    if pct >= 50:
+    if pct < -50:
         return f"\033[91m{formatted}\033[0m"
-    elif pct >= 30:
+    elif pct < -30:
         return f"\033[93m{formatted}\033[0m"
     else:
         return f"\033[92m{formatted}\033[0m"
@@ -95,39 +106,33 @@ def fetch_open_positions():
         pnl_pct = (pnl / margin) * 100
         leverage = round(notional / margin)
 
-        # SL logic
-        sl_percent = COINS_CONFIG[symbol]["sl_percent"]
-        if side == "LONG":
-            sl_price = entry * (1 - sl_percent / 100)
-            distance_pct = ((mark - sl_price) / sl_price) * 100
-        else:
-            sl_price = entry * (1 + sl_percent / 100)
-            distance_pct = ((sl_price - mark) / sl_price) * 100
-
-        sl_risk_usd = notional * (sl_percent / 100)
-        total_risk_usd += sl_risk_usd
-
         actual_sl = get_stop_loss_for_symbol(symbol)
-        actual_sl_str = f"{actual_sl:.5f}" if actual_sl else "-"
 
-        # Calculate actual % loss from entry to SL
         if actual_sl:
             if side == "SHORT":
-                pct_sl_size = ((entry - actual_sl) / entry) * 100
+                sl_percent = (entry - actual_sl) / entry * 100
             else:  # SHORT
-                pct_sl_size = ((actual_sl - entry) / entry) * 100
-            sl_size_str = colorize(pct_sl_size)
+                sl_percent = (actual_sl - entry) / entry * 100
+
+            sl_risk_usd = notional * (sl_percent / 100)
+            total_risk_usd -= sl_risk_usd
+            sl_size_str = colorize(sl_percent)
+            actual_sl_str = f"{actual_sl:.5f}"
+            sl_usd_str = colorize_dollar(sl_risk_usd)
         else:
-            pct_sl_size = None
+            sl_percent = None
+            sl_risk_usd = 0.0
+            actual_sl_str = "-"
             sl_size_str = "-"
+            sl_usd_str = "-"
 
         filtered.append(
             [
                 symbol,
                 side,
+                leverage,
                 round(entry, 5),
                 round(mark, 5),
-                leverage,
                 round(margin, 2),
                 round(notional, 2),
                 round(pnl, 2),
@@ -135,6 +140,7 @@ def fetch_open_positions():
                 f"{(margin / wallet_balance) * 100:.2f}%",
                 actual_sl_str,
                 sl_size_str,
+                sl_usd_str,
             ]
         )
 
@@ -150,16 +156,16 @@ def display_table():
     total = wallet + unrealized
 
     print(f"\n💰 Wallet Balance: ${wallet:,.2f}")
-    print(f"📊 Total Unrealized PnL: {unrealized:,.2f}")
+    print(f"📊 Total Unrealized PnL: {colorize_dollar(unrealized)}")
     print(f"🧾 Wallet w/ Unrealized: ${total:,.2f}")
-    print(f"⚠️ Total SL Risk: {color_risk_usd(total_risk_usd, total)}\n")
+    print(f"⚠️ Total SL Risk: {color_risk_usd(total_risk_usd, wallet)}\n")
 
     headers = [
         "Symbol",
         "Side",
+        "Lev",
         "Entry",
         "Mark",
-        "Lev",
         "Used Margin (USD)",
         "Position Size (USD)",
         "PnL",
@@ -167,6 +173,7 @@ def display_table():
         "Risk%",
         "SL Price",
         "% to SL",
+        "SL USD"
     ]
 
     print(
