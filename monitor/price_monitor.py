@@ -23,6 +23,7 @@ client = Client(API_KEY, API_SECRET)
 with open("config/coins.json") as f:
     COINS = list(json.load(f).keys())
 
+
 # Format % change with color
 def format_pct(pct):
     try:
@@ -36,29 +37,38 @@ def format_pct(pct):
     except:
         return pct
 
+
 # Convert datetime to Binance-compatible string
 def get_klines(symbol, interval, lookback_minutes):
     now = dt.datetime.utcnow()
     start_time = int((now - dt.timedelta(minutes=lookback_minutes)).timestamp() * 1000)
     try:
-        klines = client.get_klines(symbol=symbol, interval=interval, startTime=start_time)
+        klines = client.get_klines(
+            symbol=symbol, interval=interval, startTime=start_time
+        )
         return klines[-1]  # most recent kline
     except:
         return None
 
+
 def get_open_price_asia(symbol):
     now_utc = dt.datetime.utcnow().replace(tzinfo=pytz.utc)
     asia_tz = pytz.timezone("Asia/Shanghai")  # GMT+8
-    asia_today_8am = now_utc.astimezone(asia_tz).replace(hour=8, minute=0, second=0, microsecond=0)
+    asia_today_8am = now_utc.astimezone(asia_tz).replace(
+        hour=8, minute=0, second=0, microsecond=0
+    )
     if now_utc.astimezone(asia_tz) < asia_today_8am:
         asia_today_8am -= dt.timedelta(days=1)
 
     start_time = int(asia_today_8am.astimezone(pytz.utc).timestamp() * 1000)
     try:
-        kline = client.get_klines(symbol=symbol, interval="1m", startTime=start_time, limit=1)
+        kline = client.get_klines(
+            symbol=symbol, interval="1m", startTime=start_time, limit=1
+        )
         return float(kline[0][1]) if kline else None  # open price
     except:
         return None
+
 
 def get_price_changes(symbols):
     table = []
@@ -87,22 +97,28 @@ def get_price_changes(symbols):
 
             # Asia session open
             asia_open = get_open_price_asia(symbol)
-            change_asia = ((last_price - asia_open) / asia_open) * 100 if asia_open else 0
+            change_asia = (
+                ((last_price - asia_open) / asia_open) * 100 if asia_open else 0
+            )
 
-            table.append([
-                symbol,
-                round(last_price, 4),
-                format_pct(change_15m),
-                format_pct(change_1h),
-                format_pct(change_asia),
-                format_pct(change_24h),
-            ])
+            table.append(
+                [
+                    symbol,
+                    round(last_price, 4),
+                    format_pct(change_15m),
+                    format_pct(change_1h),
+                    format_pct(change_asia),
+                    format_pct(change_24h),
+                ]
+            )
         except Exception:
             table.append([symbol, "Error", "", "", "", ""])
     return table
 
+
 def clear_screen():
     os.system("cls" if os.name == "nt" else "clear")
+
 
 def main(once=False):
     if once:
@@ -115,10 +131,18 @@ def main(once=False):
         while True:
             clear_screen()
             print("📈 Live Crypto Price Monitor — Buibui Moon Bot\n")
-            headers = ["Symbol", "Last Price", "15m %", "1h %", "Since Asia 8AM", "24h %"]
+            headers = [
+                "Symbol",
+                "Last Price",
+                "15m %",
+                "1h %",
+                "Since Asia 8AM",
+                "24h %",
+            ]
             price_table = get_price_changes(COINS)
             print(tabulate(price_table, headers=headers, tablefmt="fancy_grid"))
             time.sleep(5)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Buibui Moon Crypto Monitor")

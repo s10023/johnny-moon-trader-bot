@@ -17,6 +17,7 @@ with open("config/coins.json") as f:
     COINS_CONFIG = json.load(f)
     COIN_ORDER = list(COINS_CONFIG.keys())
 
+
 def colorize(value, threshold=0):
     try:
         value = float(value)
@@ -29,6 +30,7 @@ def colorize(value, threshold=0):
     except:
         return value
 
+
 def color_distance_pct(pct):
     if pct < 1:
         return f"\033[91m{pct:.2f}%\033[0m"  # red: <1% to SL
@@ -36,6 +38,7 @@ def color_distance_pct(pct):
         return f"\033[93m{pct:.2f}%\033[0m"  # yellow: <3%
     else:
         return f"\033[92m{pct:.2f}%\033[0m"  # green
+
 
 def get_wallet_balance():
     balances = client.futures_account_balance()
@@ -46,6 +49,7 @@ def get_wallet_balance():
             return wallet_balance, unrealized
     return 0.0, 0.0
 
+
 def get_stop_loss_for_symbol(symbol):
     try:
         orders = client.futures_get_open_orders(symbol=symbol)
@@ -55,6 +59,7 @@ def get_stop_loss_for_symbol(symbol):
     except:
         pass
     return None
+
 
 def fetch_open_positions():
     positions = client.futures_position_information()
@@ -73,7 +78,9 @@ def fetch_open_positions():
         entry_price = float(pos["entryPrice"])
         mark_price = float(pos["markPrice"])
         notional = abs(float(pos["notional"]))
-        margin_used = float(pos.get("positionInitialMargin", 0)) or 1e-6  # avoid div by zero
+        margin_used = (
+            float(pos.get("positionInitialMargin", 0)) or 1e-6
+        )  # avoid div by zero
 
         leverage = notional / margin_used
         side = "LONG" if position_amt > 0 else "SHORT"
@@ -92,21 +99,25 @@ def fetch_open_positions():
         actual_sl = get_stop_loss_for_symbol(symbol)
         actual_sl_str = f"{actual_sl:.5f}" if actual_sl else "-"
 
-        filtered.append([
-            symbol,
-            side,
-            round(entry_price, 5),
-            round(mark_price, 5),
-            round(margin_used, 2),
-            round(position_size, 2),
-            round(pnl, 2),
-            colorize(pnl_pct),
-            f"{(margin_used / wallet_balance) * 100:.2f}%",
-            actual_sl_str,
-            color_distance_pct(pct_to_sl)
-        ])
+        filtered.append(
+            [
+                symbol,
+                side,
+                round(entry_price, 5),
+                round(mark_price, 5),
+                round(margin_used, 2),
+                round(position_size, 2),
+                round(pnl, 2),
+                colorize(pnl_pct),
+                f"{(margin_used / wallet_balance) * 100:.2f}%",
+                actual_sl_str,
+                color_distance_pct(pct_to_sl),
+            ]
+        )
 
-    filtered.sort(key=lambda row: COIN_ORDER.index(row[0]) if row[0] in COIN_ORDER else 999)
+    filtered.sort(
+        key=lambda row: COIN_ORDER.index(row[0]) if row[0] in COIN_ORDER else 999
+    )
     return filtered
 
 
@@ -118,16 +129,33 @@ def display_table():
     print(f"📊 Total Unrealized PnL: {round(unrealized, 2):,.2f}\n")
 
     headers = [
-        "Symbol", "Side", "Entry", "Mark",
-        "Used Margin (USD)", "Position Size (USD)",
-        "PnL", "PnL%", "Risk%", "SL Price", "% to SL"
+        "Symbol",
+        "Side",
+        "Entry",
+        "Mark",
+        "Used Margin (USD)",
+        "Position Size (USD)",
+        "PnL",
+        "PnL%",
+        "Risk%",
+        "SL Price",
+        "% to SL",
     ]
-    print(tabulate(table, headers=headers, tablefmt="fancy_grid", numalign="right", stralign="left"))
+    print(
+        tabulate(
+            table,
+            headers=headers,
+            tablefmt="fancy_grid",
+            numalign="right",
+            stralign="left",
+        )
+    )
 
 
 def main():
     os.system("cls" if os.name == "nt" else "clear")
     display_table()
+
 
 if __name__ == "__main__":
     main()
