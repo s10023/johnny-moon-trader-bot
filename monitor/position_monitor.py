@@ -150,6 +150,32 @@ def fetch_open_positions(sort_by="default", descending=True):
 
         filtered.append(row)
 
+    # Get coins without open positions
+    open_symbols = set(row[0] for row in filtered)
+    missing_symbols = [s for s in COIN_ORDER if s not in open_symbols]
+
+    # Add placeholder rows for missing symbols
+    for symbol in missing_symbols:
+        leverage = COINS_CONFIG[symbol]["leverage"]
+        row = [
+            symbol,  # 0
+            "-",  # side
+            leverage,  # lev
+            "-",
+            "-",  # entry, mark
+            "-",
+            "-",  # margin, size
+            "-",
+            "-",  # pnl, pnl%
+            "-",
+            "-",
+            "-",  # risk%, sl price, % to sl
+            "-",  # sl usd
+            -999,  # hidden sort: pnl_pct
+            -9999,  # hidden sort: sl_usd
+        ]
+        filtered.append(row)
+
     if sort_by == "pnl_pct":
         filtered.sort(key=lambda r: r[13], reverse=descending)
     elif sort_by == "sl_usd":
