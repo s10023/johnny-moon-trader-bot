@@ -28,6 +28,7 @@ def colorize(value, threshold=0):
     except:
         return value
 
+
 def colorize_dollar(value):
     try:
         value = float(value)
@@ -39,6 +40,7 @@ def colorize_dollar(value):
             return f"\033[93m$0.00\033[0m"
     except:
         return f"${value}"
+
 
 def color_sl_size(pct):
     if pct < 2:
@@ -173,7 +175,7 @@ def display_table():
         "Risk%",
         "SL Price",
         "% to SL",
-        "SL USD"
+        "SL USD",
     ]
 
     print(
