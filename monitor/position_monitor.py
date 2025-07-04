@@ -171,7 +171,13 @@ def display_table(sort_by="default", descending=True):
     total = wallet + unrealized
     unrealized_pct = (unrealized / wallet * 100) if wallet else 0
 
+    used_margin = sum(
+        float(row[5]) for row in table if isinstance(row[5], (int, float))
+    )
+    available_balance = max(total - used_margin, 0)
+
     print(f"\n💰 Wallet Balance: ${wallet:,.2f}")
+    print(f"💼 Available Balance: ${available_balance:,.2f}")
     print(
         f"📊 Total Unrealized PnL: {colorize_dollar(unrealized)} ({colorize(unrealized_pct)} of wallet)"
     )
