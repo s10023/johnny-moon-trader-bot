@@ -1,4 +1,4 @@
-# 🚀 Johnny Moon Trader Bot
+# 🚀 Buibui Moon Trader Bot
 
 A tactical crypto trading bot designed for fast, risk-managed, and confident entries — with live price monitoring and position tracking. Built for degens who trade smart. LFG. 🌕
 
@@ -38,7 +38,7 @@ Includes max USD-per-trade cap and wallet-level risk protection.
 ## 📦 Directory Structure
 
 ```bash
-johnny-moon-trader-bot/
+buibui-moon-trader-bot/
 ├── trade/
 │ └── open_trades.py # Open multiple trades via Binance
 ├── monitor/
@@ -61,8 +61,8 @@ johnny-moon-trader-bot/
 ### 1. Clone this repo
 
 ```bash
-git clone https://github.com/yourname/johnny-moon-trader-bot.git
-cd johnny-moon-trader-bot
+git clone https://github.com/yourname/buibui-moon-trader-bot.git
+cd buibui-moon-trader-bot
 
 ```
 
