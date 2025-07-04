@@ -1,48 +1,120 @@
+import argparse
 import time
 import os
 import json
+import datetime as dt
+import pytz
 from binance.client import Client
 from dotenv import load_dotenv
 from tabulate import tabulate
+from colorama import init, Fore, Style
 
-# Load .env for API keys
+# Init colorama
+init(autoreset=True)
+
+# Load environment
 load_dotenv()
 API_KEY = os.getenv("BINANCE_API_KEY")
 API_SECRET = os.getenv("BINANCE_API_SECRET")
 
 client = Client(API_KEY, API_SECRET)
 
-# Load coins from config
+# Load symbols from config
 with open("config/coins.json") as f:
-    COINS = list(json.load(f).keys())  # just the symbol names
+    COINS = list(json.load(f).keys())
 
-def get_prices(symbols):
-    prices = []
+# Format % change with color
+def format_pct(pct):
+    try:
+        pct = float(pct)
+        if pct > 0:
+            return Fore.GREEN + f"{pct:+.2f}%" + Style.RESET_ALL
+        elif pct < 0:
+            return Fore.RED + f"{pct:+.2f}%" + Style.RESET_ALL
+        else:
+            return Fore.YELLOW + f"{pct:+.2f}%" + Style.RESET_ALL
+    except:
+        return pct
+
+# Convert datetime to Binance-compatible string
+def get_klines(symbol, interval, lookback_minutes):
+    now = dt.datetime.utcnow()
+    start_time = int((now - dt.timedelta(minutes=lookback_minutes)).timestamp() * 1000)
+    try:
+        klines = client.get_klines(symbol=symbol, interval=interval, startTime=start_time)
+        return klines[-1]  # most recent kline
+    except:
+        return None
+
+def get_open_price_asia(symbol):
+    now_utc = dt.datetime.utcnow().replace(tzinfo=pytz.utc)
+    asia_tz = pytz.timezone("Asia/Shanghai")  # GMT+8
+    asia_today_8am = now_utc.astimezone(asia_tz).replace(hour=8, minute=0, second=0, microsecond=0)
+    if now_utc.astimezone(asia_tz) < asia_today_8am:
+        asia_today_8am -= dt.timedelta(days=1)
+
+    start_time = int(asia_today_8am.astimezone(pytz.utc).timestamp() * 1000)
+    try:
+        kline = client.get_klines(symbol=symbol, interval="1m", startTime=start_time, limit=1)
+        return float(kline[0][1]) if kline else None  # open price
+    except:
+        return None
+
+def get_price_changes(symbols):
+    table = []
     for symbol in symbols:
         try:
             ticker = client.get_ticker(symbol=symbol)
-            prices.append([
+            last_price = float(ticker["lastPrice"])
+            change_24h = float(ticker["priceChangePercent"])
+
+            # Get 15 min and 1h open prices from klines
+            k15 = get_klines(symbol, "15m", 15)
+            k60 = get_klines(symbol, "1h", 60)
+            open_15 = float(k15[1]) if k15 else last_price
+            open_60 = float(k60[1]) if k60 else last_price
+
+            change_15m = ((last_price - open_15) / open_15) * 100 if open_15 else 0
+            change_1h = ((last_price - open_60) / open_60) * 100 if open_60 else 0
+
+            # Change since Asia open (8AM GMT+8)
+            asia_open = get_open_price_asia(symbol)
+            change_asia = ((last_price - asia_open) / asia_open) * 100 if asia_open else 0
+
+            table.append([
                 symbol,
-                round(float(ticker["lastPrice"]), 4),
-                f'{float(ticker["priceChangePercent"]):+.2f}%',
-                round(float(ticker["highPrice"]), 4),
-                round(float(ticker["lowPrice"]), 4),
-                round(float(ticker["quoteVolume"]), 2)
+                round(last_price, 4),
+                format_pct(change_15m),
+                format_pct(change_1h),
+                format_pct(change_asia),
+                format_pct(change_24h),
             ])
-        except Exception as e:
-            prices.append([symbol, "Error", "", "", "", ""])
-    return prices
+        except Exception:
+            table.append([symbol, "Error", "", "", "", ""])
+    return table
 
-def main():
-    while True:
-        os.system("cls")  # use 'cls' if on Windows
-        print("📈 Live Crypto Price Monitor — Johnny Moon Bot\n")
+def clear_screen():
+    os.system("cls" if os.name == "nt" else "clear")
 
-        price_table = get_prices(COINS)
-        headers = ["Symbol", "Last Price", "24h %", "High", "Low", "Volume (USDT)"]
+def main(once=False):
+    if once:
+        clear_screen()
+        print("📈 Crypto Price Snapshot — Buibui Moon Bot\n")
+        headers = ["Symbol", "Last Price", "15m %", "1h %", "Since Asia 8AM", "24h %"]
+        price_table = get_price_changes(COINS)
         print(tabulate(price_table, headers=headers, tablefmt="fancy_grid"))
-
-        time.sleep(5)
+    else:
+        while True:
+            clear_screen()
+            print("📈 Live Crypto Price Monitor — Buibui Moon Bot\n")
+            headers = ["Symbol", "Last Price", "15m %", "1h %", "Since Asia 8AM", "24h %"]
+            price_table = get_price_changes(COINS)
+            print(tabulate(price_table, headers=headers, tablefmt="fancy_grid"))
+            time.sleep(5)
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Buibui Moon Crypto Monitor")
+    parser.add_argument("--once", action="store_true", help="Run once and exit")
+    args = parser.parse_args()
+
+    main(once=args.once)

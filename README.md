@@ -12,7 +12,8 @@ A tactical crypto trading bot designed for fast, risk-managed, and confident ent
   Open multiple trades (BTC, ETH, alts) in one go, using USD-based sizing with automatic SL & leverage.
 
 - **Live Price Monitor**  
-  See real-time prices, 24h change, and volume for top coins.
+  See real-time prices, 15m / 1h / 24h % changes, and intraday % change since Asia open (8AM GMT+8).  
+  Color-coded for clarity.
 
 - **Live Position Tracker**  
   Track open positions, wallet value, unrealized PnL, and risk exposure per trade.
@@ -36,7 +37,7 @@ Includes max USD-per-trade cap and wallet-level risk protection.
 
 ## 📦 Directory Structure
 
-```
+```bash
 johnny-moon-trader-bot/
 ├── trade/
 │ └── open_trades.py # Open multiple trades via Binance
@@ -90,7 +91,7 @@ pip freeze > requirements.txt
 
 Create a `.env` file based on .env.example:
 
-```
+```bash
 # .env
 BINANCE_API_KEY=your_key
 BINANCE_API_SECRET=your_secret
@@ -133,6 +134,18 @@ You'll be prompted to enter:
 python monitor/price_monitor.py
 ```
 
+This will loop and update every 5 seconds by default.
+To run once and exit:
+
+```bash
+python monitor/price_monitor.py --once
+```
+
+It shows:
+
+- Live price
+- 15-minute %, 1-hour %, Asia session %, and 24h %
+
 ### 📊 Monitor Positions & PnL
 
 ```bash
@@ -146,3 +159,13 @@ The `.github/workflows/monitor.yaml` file can be configured to:
 - Run position_monitor.py every 15 minutes
 
 - Send live updates to Telegram
+
+### 📌 Coming Soon / Ideas
+
+- Trade signal engine (support/resistance + volume traps)
+
+- Auto-close on global SL or high-risk warning
+
+- Visual dashboard (web UI or terminal rich)
+
+- Funding rate monitor + reversal detector
