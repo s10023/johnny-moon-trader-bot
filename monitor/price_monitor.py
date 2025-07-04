@@ -62,13 +62,21 @@ def get_open_price_asia(symbol):
 
 def get_price_changes(symbols):
     table = []
+
+    # Get all tickers once (much faster)
+    all_tickers = client.get_ticker()
+    ticker_map = {t["symbol"]: t for t in all_tickers}
+
     for symbol in symbols:
         try:
-            ticker = client.get_ticker(symbol=symbol)
+            ticker = ticker_map.get(symbol)
+            if not ticker:
+                raise ValueError("Ticker not found")
+
             last_price = float(ticker["lastPrice"])
             change_24h = float(ticker["priceChangePercent"])
 
-            # Get 15 min and 1h open prices from klines
+            # Still need individual klines
             k15 = get_klines(symbol, "15m", 15)
             k60 = get_klines(symbol, "1h", 60)
             open_15 = float(k15[1]) if k15 else last_price
@@ -77,7 +85,7 @@ def get_price_changes(symbols):
             change_15m = ((last_price - open_15) / open_15) * 100 if open_15 else 0
             change_1h = ((last_price - open_60) / open_60) * 100 if open_60 else 0
 
-            # Change since Asia open (8AM GMT+8)
+            # Asia session open
             asia_open = get_open_price_asia(symbol)
             change_asia = ((last_price - asia_open) / asia_open) * 100 if asia_open else 0
 
