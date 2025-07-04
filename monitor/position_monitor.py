@@ -117,7 +117,7 @@ def fetch_open_positions():
                 sl_percent = (actual_sl - entry) / entry * 100
 
             sl_risk_usd = notional * (sl_percent / 100)
-            total_risk_usd -= sl_risk_usd
+            total_risk_usd += sl_risk_usd
             sl_size_str = colorize(sl_percent)
             actual_sl_str = f"{actual_sl:.5f}"
             sl_usd_str = colorize_dollar(sl_risk_usd)
@@ -156,9 +156,12 @@ def display_table():
     table, total_risk_usd = fetch_open_positions()
     wallet, unrealized = get_wallet_balance()
     total = wallet + unrealized
+    unrealized_pct = (unrealized / wallet * 100) if wallet else 0
 
     print(f"\n💰 Wallet Balance: ${wallet:,.2f}")
-    print(f"📊 Total Unrealized PnL: {colorize_dollar(unrealized)}")
+    print(
+        f"📊 Total Unrealized PnL: {colorize_dollar(unrealized)} ({colorize(unrealized_pct)} of wallet)"
+    )
     print(f"🧾 Wallet w/ Unrealized: ${total:,.2f}")
     print(f"⚠️ Total SL Risk: {color_risk_usd(total_risk_usd, wallet)}\n")
 
