@@ -147,10 +147,27 @@ It shows:
 - Live price
 - 15-minute %, 1-hour %, Asia session %, and 24h %
 
+Example Output:
+
+```bash
+📈 Crypto Price Snapshot — Buibui Moon Bot
+
+╒════════════╤═════════════╤══════════╤══════════╤══════════════════╤══════════╕
+│ Symbol     │ Last Price  │ 15m %    │ 1h %     │ Since Asia 8AM   │ 24h %    │
+╞════════════╪═════════════╪══════════╪══════════╪══════════════════╪══════════╡
+│ BTCUSDT    │ 62,457.10   │ +0.53%   │ +1.42%   │ +0.88%           │ +2.31%   │
+├────────────┼─────────────┼──────────┼──────────┼──────────────────┼──────────┤
+│ ETHUSDT    │ 3,408.50    │ +0.22%   │ +1.05%   │ +0.71%           │ +1.74%   │
+├────────────┼─────────────┼──────────┼──────────┼──────────────────┼──────────┤
+│ SOLUSDT    │ 143.22      │ -0.08%   │ +0.34%   │ +0.11%           │ +0.89%   │
+╘════════════╧═════════════╧══════════╧══════════╧══════════════════╧══════════╛
+
+```
+
 ### 📊 Monitor Positions & PnL
 
 ```bash
-python monitor/position_monitor.py
+python monitor/position_monitor.py [--sort key[:asc|desc]]
 ```
 
 Shows:
@@ -161,23 +178,47 @@ Shows:
 
 - Colorized risk table with per-trade metrics
 
-- Only open positions are shown. Auto-sorted by your coins.json order.
+- Only open positions are shown. Auto-sorted by your `coins.json` order.
 
 Example Output:
 
 ```yaml
 💰 Wallet Balance: $1,123.15
-📊 Total Unrealized PnL: +290.29
+📊 Total Unrealized PnL: +290.29 (+25.85% of wallet)
+🧾 Wallet w/ Unrealized: $1,413.44
+⚠️ Total SL Risk: -$412.22 (36.71%)
 
-╒══════════════╤════════╤═══════════╤═══════════╤═════════════════════╤═══════════════════════╤════════╤════════╤═════════╕
-│ Symbol       │ Side   │     Entry │      Mark │   Used Margin (USD) │   Position Size (USD) │    PnL │ PnL%   │ Risk%   │
-╞══════════════╪════════╪═══════════╪═══════════╪═════════════════════╪═══════════════════════╪════════╪════════╪═════════╡
-│ BTCUSDT      │ SHORT  │ 110032    │ 109265    │              598.77 │              14969.3  │ 105.08 │ +0.70% │ 53.31%  │
-│ ETHUSDT      │ SHORT  │   2616.17 │   2580.28 │              598.11 │              11962.2  │ 166.2  │ +1.37% │ 53.25%  │
-│ ...          │ ...    │    ...    │    ...    │               ...    │                 ...    │ ...    │  ...   │  ...    │
-╘══════════════╧════════╧═══════════╧═══════════╧═════════════════════╧═══════════════════════╧════════╧════════╧═════════╛
+╒══════════════╤════════╤═══════╤═════════╤═════════╤═════════════════════╤═══════════════════════╤════════╤══════════╤═════════╤════════════╤═══════════╤══════════╕
+│ Symbol       │ Side   │   Lev │   Entry │    Mark │   Used Margin (USD) │   Position Size (USD) │    PnL │ PnL%     │ Risk%   │   SL Price │ % to SL   │ SL USD   │
+╞══════════════╪════════╪═══════╪═════════╪═════════╪═════════════════════╪═══════════════════════╪════════╪══════════╪═════════╪════════════╪═══════════╪══════════╡
+│ BTCUSDT      │ SHORT  │    25 │ 110032  │ 108757  │              595.99 │              14,899.7 │ 174.73 │ +29.32%  │ 52.98%  │   109970.0 │ +0.06%    │ $8.45    │
+├──────────────┼────────┼───────┼─────────┼─────────┼─────────────────────┼───────────────────────┼────────┼──────────┼─────────┼────────────┼───────────┼──────────┤
+│ ETHUSDT      │ SHORT  │    20 │ 2616.17 │ 2550.10 │              591.11 │              11,822.3 │ 306.29 │ +51.82%  │ 52.54%  │    2614.80 │ +0.05%    │ $6.18    │
+╘══════════════╧════════╧═══════╧═════════╧═════════╧═════════════════════╧═══════════════════════╧════════╧══════════╧═════════╧════════════╧═══════════╧══════════╛
+
 
 ```
+
+Sorting Options:
+
+- You can now control how the table is sorted using the `--sort` flag.
+
+```bash
+python monitor/position_monitor.py --sort pnl_pct:desc   # Sort by highest PnL%
+python monitor/position_monitor.py --sort sl_usd:asc     # Sort by lowest SL risk
+python monitor/position_monitor.py --sort default         # Sort by coins.json order (default)
+
+```
+
+Supported sort keys:
+
+- default — Respect order from `config/coins.json`
+
+- `pnl_pct` — Sort by unrealized profit/loss % (margin-based)
+
+- `sl_usd` — Sort by USD value at risk based on SL
+
+Append `:asc` or `:desc` to control the sort direction (defaults to `desc`).
 
 ### ☁️ GitHub Actions (Optional)
 
