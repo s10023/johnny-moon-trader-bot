@@ -3,6 +3,7 @@ import json
 from dotenv import load_dotenv
 from binance.client import Client
 from tabulate import tabulate
+import argparse
 
 # Load .env variables
 load_dotenv()
@@ -83,7 +84,7 @@ def get_stop_loss_for_symbol(symbol):
     return None
 
 
-def fetch_open_positions():
+def fetch_open_positions(sort_by="default", descending=True):
     positions = client.futures_position_information()
     filtered = []
     wallet_balance, _ = get_wallet_balance()
@@ -128,32 +129,44 @@ def fetch_open_positions():
             sl_size_str = "-"
             sl_usd_str = "-"
 
-        filtered.append(
-            [
-                symbol,
-                side,
-                leverage,
-                round(entry, 5),
-                round(mark, 5),
-                round(margin, 2),
-                round(notional, 2),
-                round(pnl, 2),
-                colorize(pnl_pct),
-                f"{(margin / wallet_balance) * 100:.2f}%",
-                actual_sl_str,
-                sl_size_str,
-                sl_usd_str,
-            ]
+        row = [
+            symbol,  # 0
+            side,  # 1
+            leverage,  # 2
+            round(entry, 5),  # 3
+            round(mark, 5),  # 4
+            round(margin, 2),  # 5
+            round(notional, 2),  # 6
+            round(pnl, 2),  # 7
+            colorize(pnl_pct),  # 8
+            f"{(margin / wallet_balance) * 100:.2f}%",  # 9
+            actual_sl_str,  # 10
+            sl_size_str,  # 11
+            sl_usd_str,  # 12
+        ]
+        # Append extra values at the end for sorting (not shown)
+        row.append(pnl_pct)  # index 13
+        row.append(sl_risk_usd)  # index 14
+
+        filtered.append(row)
+
+    if sort_by == "pnl_pct":
+        filtered.sort(key=lambda r: r[13], reverse=descending)
+    elif sort_by == "sl_usd":
+        filtered.sort(key=lambda r: r[14], reverse=descending)
+    else:  # default sort by COIN_ORDER
+        filtered.sort(
+            key=lambda r: COIN_ORDER.index(r[0]) if r[0] in COIN_ORDER else 999
         )
 
-    filtered.sort(
-        key=lambda row: COIN_ORDER.index(row[0]) if row[0] in COIN_ORDER else 999
-    )
+    # Remove hidden sort columns
+    filtered = [row[:13] for row in filtered]
+
     return filtered, total_risk_usd
 
 
-def display_table():
-    table, total_risk_usd = fetch_open_positions()
+def display_table(sort_by="default", descending=True):
+    table, total_risk_usd = fetch_open_positions(sort_by, descending)
     wallet, unrealized = get_wallet_balance()
     total = wallet + unrealized
     unrealized_pct = (unrealized / wallet * 100) if wallet else 0
@@ -193,8 +206,18 @@ def display_table():
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--sort",
+        default="default",
+        help="Sort order, e.g., 'pnl_pct:desc', 'sl_usd:asc', or 'default'",
+    )
+    args = parser.parse_args()
+    sort_key, _, sort_dir = args.sort.partition(":")
+    sort_order = sort_dir.lower() != "asc"  # default to descending if not asc
+
     os.system("cls" if os.name == "nt" else "clear")
-    display_table()
+    display_table(sort_by=sort_key, descending=sort_order)
 
 
 if __name__ == "__main__":
