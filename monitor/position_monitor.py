@@ -4,6 +4,19 @@ from dotenv import load_dotenv
 from binance.client import Client
 from tabulate import tabulate
 import argparse
+import time
+
+import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from utils.telegram import send_telegram_message
+
+
+def sync_binance_time(client):
+    server_time = client.get_server_time()["serverTime"]
+    local_time = int(time.time() * 1000)
+    client.TIME_OFFSET = server_time - local_time
+
 
 # Load .env variables
 load_dotenv()
@@ -195,7 +208,7 @@ def fetch_open_positions(sort_by="default", descending=True):
     return filtered, total_risk_usd
 
 
-def display_table(sort_by="default", descending=True):
+def display_table(sort_by="default", descending=True, telegram=False):
     table, total_risk_usd = fetch_open_positions(sort_by, descending)
     wallet, unrealized = get_wallet_balance()
     total = wallet + unrealized
@@ -240,21 +253,40 @@ def display_table(sort_by="default", descending=True):
         )
     )
 
+    if telegram:
+        summary = (
+            f"📌 Open Positions Snapshot\n\n"
+            f"💰 Wallet Balance: ${wallet:,.2f}\n"
+            f"💼 Available Balance: ${available_balance:,.2f}\n"
+            f"📊 Unrealized PnL: {unrealized:+.2f} ({unrealized_pct:+.2f}%)\n"
+            f"🧾 Wallet + PnL: ${total:,.2f}\n"
+            f"⚠️ SL Risk: ${total_risk_usd:,.2f}"
+        )
+        try:
+            send_telegram_message(summary)
+        except Exception as e:
+            print("❌ Telegram message failed:", e)
 
-def main():
+
+def main(sort="default", telegram=False):
+
+    sort_key, _, sort_dir = sort.partition(":")
+    sort_order = sort_dir.lower() != "asc"  # default to descending if not asc
+
+    os.system("cls" if os.name == "nt" else "clear")
+    display_table(sort_by=sort_key, descending=sort_order, telegram=telegram)
+
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--sort",
         default="default",
         help="Sort order, e.g., 'pnl_pct:desc', 'sl_usd:asc', or 'default'",
     )
+    parser.add_argument(
+        "--telegram", action="store_true", help="Send output to Telegram"
+    )
     args = parser.parse_args()
-    sort_key, _, sort_dir = args.sort.partition(":")
-    sort_order = sort_dir.lower() != "asc"  # default to descending if not asc
 
-    os.system("cls" if os.name == "nt" else "clear")
-    display_table(sort_by=sort_key, descending=sort_order)
-
-
-if __name__ == "__main__":
-    main()
+    main(sort=args.sort, telegram=args.telegram)
