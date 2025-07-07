@@ -7,22 +7,20 @@ import argparse
 import time
 
 import sys
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils.telegram import send_telegram_message
-
 
 def sync_binance_time(client):
     server_time = client.get_server_time()["serverTime"]
     local_time = int(time.time() * 1000)
     client.TIME_OFFSET = server_time - local_time
 
-
 # Load .env variables
 load_dotenv()
 API_KEY = os.getenv("BINANCE_API_KEY")
 API_SECRET = os.getenv("BINANCE_API_SECRET")
 client = Client(API_KEY, API_SECRET)
+sync_binance_time(client)
 
 # Load coin config
 with open("config/coins.json") as f:
@@ -217,7 +215,7 @@ def display_table(sort_by="default", descending=True, telegram=False):
     used_margin = sum(
         float(row[5]) for row in table if isinstance(row[5], (int, float))
     )
-    available_balance = max(total - used_margin, 0)
+    available_balance = total - used_margin
 
     print(f"\n💰 Wallet Balance: ${wallet:,.2f}")
     print(f"💼 Available Balance: ${available_balance:,.2f}")

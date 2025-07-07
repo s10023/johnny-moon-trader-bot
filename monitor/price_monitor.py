@@ -22,7 +22,15 @@ load_dotenv()
 API_KEY = os.getenv("BINANCE_API_KEY")
 API_SECRET = os.getenv("BINANCE_API_SECRET")
 
+
+def sync_binance_time(client):
+    server_time = client.get_server_time()["serverTime"]
+    local_time = int(time.time() * 1000)
+    client.TIME_OFFSET = server_time - local_time
+
+
 client = Client(API_KEY, API_SECRET)
+sync_binance_time(client)
 
 # Load symbols from config
 with open("config/coins.json") as f:
