@@ -4,12 +4,21 @@ from dotenv import load_dotenv
 from binance.client import Client
 from tabulate import tabulate
 import argparse
+import time
+
+
+def sync_binance_time(client):
+    server_time = client.get_server_time()["serverTime"]
+    local_time = int(time.time() * 1000)
+    client.TIME_OFFSET = server_time - local_time
+
 
 # Load .env variables
 load_dotenv()
 API_KEY = os.getenv("BINANCE_API_KEY")
 API_SECRET = os.getenv("BINANCE_API_SECRET")
 client = Client(API_KEY, API_SECRET)
+sync_binance_time(client)
 
 # Load coin config
 with open("config/coins.json") as f:
