@@ -9,6 +9,11 @@ from dotenv import load_dotenv
 from tabulate import tabulate
 from colorama import init, Fore, Style
 
+import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from utils.telegram import send_telegram_message
+
 # Init colorama
 init(autoreset=True)
 
@@ -46,6 +51,13 @@ def format_pct(pct):
         return pct
 
 
+def format_pct_simple(pct):
+    try:
+        return f"{float(pct):+.2f}%"
+    except:
+        return pct
+
+
 # Convert datetime to Binance-compatible string
 def get_klines(symbol, interval, lookback_minutes):
     now = dt.datetime.utcnow()
@@ -78,7 +90,7 @@ def get_open_price_asia(symbol):
         return None
 
 
-def get_price_changes(symbols):
+def get_price_changes(symbols, telegram=False):
     table = []
 
     # Get all tickers once (much faster)
@@ -109,16 +121,28 @@ def get_price_changes(symbols):
                 ((last_price - asia_open) / asia_open) * 100 if asia_open else 0
             )
 
-            table.append(
-                [
-                    symbol,
-                    round(last_price, 4),
-                    format_pct(change_15m),
-                    format_pct(change_1h),
-                    format_pct(change_asia),
-                    format_pct(change_24h),
-                ]
-            )
+            if telegram:
+                table.append(
+                    [
+                        symbol,
+                        round(last_price, 4),
+                        format_pct_simple(change_15m),
+                        format_pct_simple(change_1h),
+                        format_pct_simple(change_asia),
+                        format_pct_simple(change_24h),
+                    ]
+                )
+            else:
+                table.append(
+                    [
+                        symbol,
+                        round(last_price, 4),
+                        format_pct(change_15m),
+                        format_pct(change_1h),
+                        format_pct(change_asia),
+                        format_pct(change_24h),
+                    ]
+                )
         except Exception:
             table.append([symbol, "Error", "", "", "", ""])
     return table
@@ -128,13 +152,24 @@ def clear_screen():
     os.system("cls" if os.name == "nt" else "clear")
 
 
-def main(once=False):
+def main(once=False, telegram=False):
     if once:
         clear_screen()
         print("📈 Crypto Price Snapshot — Buibui Moon Bot\n")
         headers = ["Symbol", "Last Price", "15m %", "1h %", "Since Asia 8AM", "24h %"]
         price_table = get_price_changes(COINS)
         print(tabulate(price_table, headers=headers, tablefmt="fancy_grid"))
+
+        if telegram:
+            price_table = get_price_changes(COINS, telegram=True)
+            plain_table = tabulate(price_table, headers=headers, tablefmt="plain")
+            try:
+                send_telegram_message(
+                    f"📈 Snapshot Price Monitor\n```\n{plain_table}\n```"
+                )
+            except Exception as e:
+                print("❌ Telegram message failed:", e)
+
     else:
         while True:
             clear_screen()
@@ -155,6 +190,9 @@ def main(once=False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Buibui Moon Crypto Monitor")
     parser.add_argument("--once", action="store_true", help="Run once and exit")
+    parser.add_argument(
+        "--telegram", action="store_true", help="Send output to Telegram"
+    )
     args = parser.parse_args()
 
-    main(once=args.once)
+    main(once=args.once, telegram=args.telegram)
