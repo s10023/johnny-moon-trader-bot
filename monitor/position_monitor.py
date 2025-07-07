@@ -7,13 +7,16 @@ import argparse
 import time
 
 import sys
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils.telegram import send_telegram_message
+
 
 def sync_binance_time(client):
     server_time = client.get_server_time()["serverTime"]
     local_time = int(time.time() * 1000)
     client.TIME_OFFSET = server_time - local_time
+
 
 # Load .env variables
 load_dotenv()
