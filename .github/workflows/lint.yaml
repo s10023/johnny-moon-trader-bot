@@ -2,6 +2,8 @@ name: Lint Markdown and Python
 
 on:
   push:
+    branches:
+        - main
     paths:
       - '**/*.md'
       - '**/*.py'
