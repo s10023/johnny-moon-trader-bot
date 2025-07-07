@@ -204,7 +204,7 @@ def display_table(sort_by="default", descending=True):
     used_margin = sum(
         float(row[5]) for row in table if isinstance(row[5], (int, float))
     )
-    available_balance = max(total - used_margin, 0)
+    available_balance = total - used_margin
 
     print(f"\n💰 Wallet Balance: ${wallet:,.2f}")
     print(f"💼 Available Balance: ${available_balance:,.2f}")
