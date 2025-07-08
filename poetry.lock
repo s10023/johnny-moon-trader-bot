@@ -134,6 +134,7 @@ files = [
 
 [package.dependencies]
 frozenlist = ">=1.1.0"
+typing-extensions = {version = ">=4.2", markers = "python_version < \"3.13\""}
 
 [[package]]
 name = "async-timeout"
@@ -1369,5 +1370,5 @@ propcache = ">=0.2.1"
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.13"
-content-hash = "4abc5069d5dd775027ad0beb0bacc42d74cf1c42358a55d2dc82a6e79f2959d8"
+python-versions = ">=3.11"
+content-hash = "22b83809a0517e158f98229ec47c3f78c78b7240f1721a19a3c4dc492fccb1ef"

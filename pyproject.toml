@@ -6,7 +6,7 @@ authors = [
     {name = "s10023",email = "ngkhaijian@gmail.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 dependencies = [
     "aiohappyeyeballs (>=2.6.1,<3.0.0)",
     "aiohttp (>=3.12.13,<4.0.0)",
