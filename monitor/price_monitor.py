@@ -8,6 +8,7 @@ from binance.client import Client
 from dotenv import load_dotenv
 from tabulate import tabulate
 from colorama import init, Fore, Style
+import logging
 
 import sys
 
@@ -21,6 +22,8 @@ init(autoreset=True)
 load_dotenv()
 API_KEY = os.getenv("BINANCE_API_KEY")
 API_SECRET = os.getenv("BINANCE_API_SECRET")
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s:%(message)s")
 
 
 def sync_binance_time(client):
@@ -47,14 +50,16 @@ def format_pct(pct):
             return Fore.RED + f"{pct:+.2f}%" + Style.RESET_ALL
         else:
             return Fore.YELLOW + f"{pct:+.2f}%" + Style.RESET_ALL
-    except:
+    except Exception as e:
+        logging.error(f"Error in format_pct: {e}")
         return pct
 
 
 def format_pct_simple(pct):
     try:
         return f"{float(pct):+.2f}%"
-    except:
+    except Exception as e:
+        logging.error(f"Error in format_pct_simple: {e}")
         return pct
 
 
@@ -67,7 +72,8 @@ def get_klines(symbol, interval, lookback_minutes):
             symbol=symbol, interval=interval, startTime=start_time
         )
         return klines[-1]  # most recent kline
-    except:
+    except Exception as e:
+        logging.error(f"Error in get_klines for {symbol} [{interval}]: {e}")
         return None
 
 
@@ -86,7 +92,8 @@ def get_open_price_asia(symbol):
             symbol=symbol, interval="1m", startTime=start_time, limit=1
         )
         return float(kline[0][1]) if kline else None  # open price
-    except:
+    except Exception as e:
+        logging.error(f"Error in get_open_price_asia for {symbol}: {e}")
         return None
 
 
@@ -94,8 +101,12 @@ def get_price_changes(symbols, telegram=False):
     table = []
 
     # Get all tickers once (much faster)
-    all_tickers = client.get_ticker()
-    ticker_map = {t["symbol"]: t for t in all_tickers}
+    try:
+        all_tickers = client.get_ticker()
+        ticker_map = {t["symbol"]: t for t in all_tickers}
+    except Exception as e:
+        logging.error(f"Error fetching all tickers: {e}")
+        return [[symbol, "Error", "", "", "", ""] for symbol in symbols]
 
     for symbol in symbols:
         try:
@@ -143,7 +154,8 @@ def get_price_changes(symbols, telegram=False):
                         format_pct(change_24h),
                     ]
                 )
-        except Exception:
+        except Exception as e:
+            logging.error(f"Error in get_price_changes for {symbol}: {e}")
             table.append([symbol, "Error", "", "", "", ""])
     return table
 

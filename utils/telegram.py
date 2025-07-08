@@ -1,6 +1,9 @@
 import os
 import requests
 from dotenv import load_dotenv
+import logging
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s:%(message)s")
 
 load_dotenv()
 
@@ -10,7 +13,7 @@ CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 def send_telegram_message(text):
     if not BOT_TOKEN or not CHAT_ID:
-        print("Telegram not configured properly.")
+        logging.error("Telegram not configured properly.")
         return
 
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
@@ -24,4 +27,4 @@ def send_telegram_message(text):
     try:
         requests.post(url, data=payload, timeout=10)
     except Exception as e:
-        print("❌ Failed to send Telegram message:", e)
+        logging.error(f"❌ Failed to send Telegram message: {e}")
