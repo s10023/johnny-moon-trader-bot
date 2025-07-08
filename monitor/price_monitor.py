@@ -9,8 +9,8 @@ from dotenv import load_dotenv
 from tabulate import tabulate
 from colorama import init, Fore, Style
 import logging
-
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils.telegram import send_telegram_message
@@ -73,8 +73,41 @@ def get_klines(symbol, interval, lookback_minutes):
         )
         return klines[-1]  # most recent kline
     except Exception as e:
-        logging.error(f"Error in get_klines for {symbol} [{interval}]: {e}")
+        # logging.error(f"Error in get_klines for {symbol} [{interval}]: {e}")
         return None
+
+
+def batch_get_klines(symbols, intervals_lookbacks):
+    """
+    Batch fetch klines for all symbols and intervals in parallel.
+    intervals_lookbacks: list of (interval, lookback_minutes)
+    Returns: dict of {(symbol, interval): kline}
+    """
+    results = {}
+
+    def fetch(symbol, interval, lookback):
+        now = dt.datetime.utcnow()
+        start_time = int((now - dt.timedelta(minutes=lookback)).timestamp() * 1000)
+        try:
+            klines = client.get_klines(
+                symbol=symbol, interval=interval, startTime=start_time
+            )
+            return ((symbol, interval), klines[-1] if klines else None)
+        except Exception as e:
+            # logging.error(f"Error in batch_get_klines for {symbol} [{interval}]: {e}")
+            return ((symbol, interval), None)
+
+    max_workers = max(1, os.cpu_count() // 2)
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [
+            executor.submit(fetch, symbol, interval, lookback)
+            for symbol in symbols
+            for interval, lookback in intervals_lookbacks
+        ]
+        for future in as_completed(futures):
+            key, kline = future.result()
+            results[key] = kline
+    return results
 
 
 def get_open_price_asia(symbol):
@@ -93,41 +126,63 @@ def get_open_price_asia(symbol):
         )
         return float(kline[0][1]) if kline else None  # open price
     except Exception as e:
-        logging.error(f"Error in get_open_price_asia for {symbol}: {e}")
+        # logging.error(f"Error in get_open_price_asia for {symbol}: {e}")
         return None
 
 
 def get_price_changes(symbols, telegram=False):
     table = []
-
+    invalid_symbols = set()
     # Get all tickers once (much faster)
     try:
         all_tickers = client.get_ticker()
         ticker_map = {t["symbol"]: t for t in all_tickers}
     except Exception as e:
         logging.error(f"Error fetching all tickers: {e}")
-        return [[symbol, "Error", "", "", "", ""] for symbol in symbols]
+        return [[symbol, "Error", "", "", "", ""] for symbol in symbols], set()
+
+    # Batch fetch klines for all symbols
+    intervals_lookbacks = [("15m", 15), ("1h", 60)]
+    kline_map = batch_get_klines(symbols, intervals_lookbacks)
+
+    def get_asia_open_parallel(symbols):
+        results = {}
+
+        def fetch(symbol):
+            return (symbol, get_open_price_asia(symbol))
+
+        max_workers = max(1, os.cpu_count() // 2)
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(fetch, symbol) for symbol in symbols]
+            for future in as_completed(futures):
+                symbol, asia_open = future.result()
+                results[symbol] = asia_open
+        return results
+
+    asia_open_map = get_asia_open_parallel(symbols)
 
     for symbol in symbols:
         try:
             ticker = ticker_map.get(symbol)
             if not ticker:
-                raise ValueError("Ticker not found")
+                invalid_symbols.add((symbol, "Ticker not found"))
+                table.append([symbol, "Error", "", "", "", ""])
+                continue
 
             last_price = float(ticker["lastPrice"])
             change_24h = float(ticker["priceChangePercent"])
 
-            # Still need individual klines
-            k15 = get_klines(symbol, "15m", 15)
-            k60 = get_klines(symbol, "1h", 60)
+            # Use batch klines
+            k15 = kline_map.get((symbol, "15m"))
+            k60 = kline_map.get((symbol, "1h"))
             open_15 = float(k15[1]) if k15 else last_price
             open_60 = float(k60[1]) if k60 else last_price
 
             change_15m = ((last_price - open_15) / open_15) * 100 if open_15 else 0
             change_1h = ((last_price - open_60) / open_60) * 100 if open_60 else 0
 
-            # Asia session open
-            asia_open = get_open_price_asia(symbol)
+            # Asia session open (parallelized)
+            asia_open = asia_open_map.get(symbol)
             change_asia = (
                 ((last_price - asia_open) / asia_open) * 100 if asia_open else 0
             )
@@ -155,9 +210,14 @@ def get_price_changes(symbols, telegram=False):
                     ]
                 )
         except Exception as e:
-            logging.error(f"Error in get_price_changes for {symbol}: {e}")
+            msg = str(e)
+            if "Invalid symbol" in msg:
+                invalid_symbols.add((symbol, "Invalid symbol"))
+            else:
+                invalid_symbols.add((symbol, msg))
+            # logging.error(f"Error in get_price_changes for {symbol}: {e}")
             table.append([symbol, "Error", "", "", "", ""])
-    return table
+    return table, invalid_symbols
 
 
 def clear_screen():
@@ -169,11 +229,16 @@ def main(live=False, telegram=False):
         clear_screen()
         print("📈 Crypto Price Snapshot — Buibui Moon Bot\n")
         headers = ["Symbol", "Last Price", "15m %", "1h %", "Since Asia 8AM", "24h %"]
-        price_table = get_price_changes(COINS)
+        price_table, invalid_symbols = get_price_changes(COINS)
         print(tabulate(price_table, headers=headers, tablefmt="fancy_grid"))
 
+        if invalid_symbols:
+            print("\n⚠️  The following symbols had errors:")
+            for symbol, reason in sorted(invalid_symbols):
+                print(f"  - {symbol}: {reason}")
+
         if telegram:
-            price_table = get_price_changes(COINS, telegram=True)
+            price_table, _ = get_price_changes(COINS, telegram=True)
             plain_table = tabulate(price_table, headers=headers, tablefmt="plain")
             try:
                 send_telegram_message(
@@ -195,8 +260,12 @@ def main(live=False, telegram=False):
                     "Since Asia 8AM",
                     "24h %",
                 ]
-                price_table = get_price_changes(COINS)
+                price_table, invalid_symbols = get_price_changes(COINS)
                 print(tabulate(price_table, headers=headers, tablefmt="fancy_grid"))
+                if invalid_symbols:
+                    print("\n⚠️  The following symbols had errors:")
+                    for symbol, reason in sorted(invalid_symbols):
+                        print(f"  - {symbol}: {reason}")
                 time.sleep(5)
         except KeyboardInterrupt:
             print("\nExiting gracefully. Goodbye!")
