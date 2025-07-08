@@ -70,23 +70,21 @@ cd buibui-moon-trader-bot
 ### 2. Create and Activate a Virtual Environment
 
 ```bash
-# Windows
-python -m venv venv
-.\venv\Scripts\activate
-
-# macOS/Linux
-python3 -m venv venv
-source venv/bin/activate
+# With Poetry (recommended)
+poetry install --no-root
+poetry shell
 ```
+
+(If you want to use a system venv, you can, but Poetry manages its own by default.)
 
 ### 3. Install dependencies
 
 ```bash
-pip install -r requirements.txt
+poetry install --no-root
 ```
 
 🔁 To update later:
-pip freeze > requirements.txt
+poetry update
 
 ### 4. Add Your API Keys
 
@@ -103,7 +101,7 @@ TELEGRAM_CHAT_ID=your_chat_id
 
 ### 4. Configure your coins
 
-Edit `config/coins.json` to define each symbol’s leverage and stop-loss percent.
+Edit `config/coins.json` to define each symbol's leverage and stop-loss percent.
 
 ```json
 {
@@ -118,7 +116,7 @@ Edit `config/coins.json` to define each symbol’s leverage and stop-loss percen
 ### 🧾 Open Multiple Trades (manually)
 
 ```bash
-python trade/open_trades.py
+poetry run python trade/open_trades.py
 ```
 
 You'll be prompted to enter:
@@ -132,14 +130,14 @@ You'll be prompted to enter:
 ### 📈 Monitor Prices
 
 ```bash
-python monitor/price_monitor.py
+poetry run python monitor/price_monitor.py
 ```
 
 This will loop and update every 5 seconds by default.
 To run once and exit:
 
 ```bash
-python monitor/price_monitor.py --once
+poetry run python monitor/price_monitor.py --once
 ```
 
 It shows:
@@ -167,7 +165,7 @@ Example Output:
 ### 📊 Monitor Positions & PnL
 
 ```bash
-python monitor/position_monitor.py [--sort key[:asc|desc]]
+poetry run python monitor/position_monitor.py [--sort key[:asc|desc]]
 ```
 
 Shows:
@@ -204,9 +202,9 @@ Sorting Options:
 - You can now control how the table is sorted using the `--sort` flag.
 
 ```bash
-python monitor/position_monitor.py --sort pnl_pct:desc   # Sort by highest PnL%
-python monitor/position_monitor.py --sort sl_usd:asc     # Sort by lowest SL risk
-python monitor/position_monitor.py --sort default         # Sort by coins.json order (default)
+poetry run python monitor/position_monitor.py --sort pnl_pct:desc   # Sort by highest PnL%
+poetry run python monitor/position_monitor.py --sort sl_usd:asc     # Sort by lowest SL risk
+poetry run python monitor/position_monitor.py --sort default         # Sort by coins.json order (default)
 
 ```
 
