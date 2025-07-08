@@ -25,6 +25,7 @@ def sync_binance_time(client):
 load_dotenv()
 API_KEY = os.getenv("BINANCE_API_KEY")
 API_SECRET = os.getenv("BINANCE_API_SECRET")
+WALLET_TARGET = float(os.getenv("WALLET_TARGET", 0))
 client = Client(API_KEY, API_SECRET)
 sync_binance_time(client)
 
@@ -215,6 +216,17 @@ def fetch_open_positions(sort_by="default", descending=True):
     return filtered, total_risk_usd
 
 
+def display_progress_bar(current, target, bar_length=30):
+    if target <= 0:
+        return ""
+    pct = min(max(current / target, 0), 1)
+    filled = int(bar_length * pct)
+    empty = bar_length - filled
+    color = "\033[92m" if pct >= 1 else ("\033[93m" if pct >= 0.5 else "\033[91m")
+    bar = color + "█" * filled + "-" * empty + "\033[0m"
+    return f"Wallet Target: ${current:,.2f} / ${target:,.2f} |{bar}| {pct*100:.1f}%"
+
+
 def display_table(sort_by="default", descending=True, telegram=False):
     table, total_risk_usd = fetch_open_positions(sort_by, descending)
     wallet, unrealized = get_wallet_balance()
@@ -233,6 +245,8 @@ def display_table(sort_by="default", descending=True, telegram=False):
     )
     print(f"🧾 Wallet w/ Unrealized: ${total:,.2f}")
     print(f"⚠️ Total SL Risk: {color_risk_usd(total_risk_usd, wallet)}\n")
+    if WALLET_TARGET > 0:
+        print(display_progress_bar(total, WALLET_TARGET))
 
     headers = [
         "Symbol",

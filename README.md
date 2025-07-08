@@ -97,6 +97,9 @@ BINANCE_API_SECRET=your_secret
 
 TELEGRAM_BOT_TOKEN=bot_token
 TELEGRAM_CHAT_ID=your_chat_id
+
+# Short-term wallet target for progress bar
+WALLET_TARGET=2000
 ```
 
 ### 4. Configure your coins
