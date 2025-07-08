@@ -133,11 +133,11 @@ You'll be prompted to enter:
 poetry run python monitor/price_monitor.py
 ```
 
-This will loop and update every 5 seconds by default.
-To run once and exit:
+This will run once and exit by default.
+To run in live refresh mode:
 
 ```bash
-poetry run python monitor/price_monitor.py --once
+poetry run python monitor/price_monitor.py --live
 ```
 
 It shows:
