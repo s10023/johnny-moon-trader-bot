@@ -5,11 +5,14 @@ from binance.client import Client
 from tabulate import tabulate
 import argparse
 import time
+import logging
 
 import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils.telegram import send_telegram_message
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s:%(message)s")
 
 
 def sync_binance_time(client):
@@ -40,7 +43,8 @@ def colorize(value, threshold=0):
             return f"\033[91m{value:+.2f}%\033[0m"
         else:
             return f"\033[93m{value:+.2f}%\033[0m"
-    except:
+    except Exception as e:
+        logging.error(f"Error in colorize: {e}")
         return value
 
 
@@ -53,7 +57,8 @@ def colorize_dollar(value):
             return f"\033[91m-${abs(value):,.2f}\033[0m"
         else:
             return f"\033[93m$0.00\033[0m"
-    except:
+    except Exception as e:
+        logging.error(f"Error in colorize_dollar: {e}")
         return f"${value}"
 
 
@@ -93,7 +98,8 @@ def get_stop_loss_for_symbol(symbol):
         for o in orders:
             if o["type"] in ("STOP_MARKET", "STOP") and o.get("reduceOnly"):
                 return float(o["stopPrice"])
-    except:
+    except Exception as e:
+        logging.error(f"Error in get_stop_loss_for_symbol: {e}")
         pass
     return None
 
@@ -266,7 +272,7 @@ def display_table(sort_by="default", descending=True, telegram=False):
         try:
             send_telegram_message(summary)
         except Exception as e:
-            print("❌ Telegram message failed:", e)
+            logging.error(f"❌ Telegram message failed: {e}")
 
 
 def main(sort="default", telegram=False):
