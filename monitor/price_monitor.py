@@ -73,7 +73,7 @@ def get_klines(symbol, interval, lookback_minutes):
         )
         return klines[-1]  # most recent kline
     except Exception as e:
-        logging.error(f"Error in get_klines: {e}")
+        logging.error(f"Error in get_klines for {symbol} [{interval}]: {e}")
         return None
 
 
@@ -93,7 +93,7 @@ def get_open_price_asia(symbol):
         )
         return float(kline[0][1]) if kline else None  # open price
     except Exception as e:
-        logging.error(f"Error in get_open_price_asia: {e}")
+        logging.error(f"Error in get_open_price_asia for {symbol}: {e}")
         return None
 
 
@@ -101,8 +101,12 @@ def get_price_changes(symbols, telegram=False):
     table = []
 
     # Get all tickers once (much faster)
-    all_tickers = client.get_ticker()
-    ticker_map = {t["symbol"]: t for t in all_tickers}
+    try:
+        all_tickers = client.get_ticker()
+        ticker_map = {t["symbol"]: t for t in all_tickers}
+    except Exception as e:
+        logging.error(f"Error fetching all tickers: {e}")
+        return [[symbol, "Error", "", "", "", ""] for symbol in symbols]
 
     for symbol in symbols:
         try:
