@@ -152,8 +152,8 @@ def clear_screen():
     os.system("cls" if os.name == "nt" else "clear")
 
 
-def main(once=False, telegram=False):
-    if once:
+def main(live=False, telegram=False):
+    if not live:
         clear_screen()
         print("📈 Crypto Price Snapshot — Buibui Moon Bot\n")
         headers = ["Symbol", "Last Price", "15m %", "1h %", "Since Asia 8AM", "24h %"]
@@ -189,10 +189,10 @@ def main(once=False, telegram=False):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Buibui Moon Crypto Monitor")
-    parser.add_argument("--once", action="store_true", help="Run once and exit")
+    parser.add_argument("--live", action="store_true", help="Run in live refresh mode")
     parser.add_argument(
         "--telegram", action="store_true", help="Send output to Telegram"
     )
     args = parser.parse_args()
 
-    main(once=args.once, telegram=args.telegram)
+    main(live=args.live, telegram=args.telegram)
