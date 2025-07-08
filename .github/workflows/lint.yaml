@@ -33,11 +33,14 @@ jobs:
       - name: Install markdownlint-cli
         run: npm install -g markdownlint-cli
 
-      - name: Install black
-        run: pip install black
+      - name: Install Poetry
+        run: curl -sSL https://install.python-poetry.org | python3 -
+
+      - name: Install dependencies
+        run: poetry install --no-root
 
       - name: Lint Markdown files
         run: markdownlint "**/*.md"
 
       - name: Lint Python files with black
-        run: black --check .
+        run: poetry run black --check .
