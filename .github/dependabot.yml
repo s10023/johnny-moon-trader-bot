@@ -1,0 +1,9 @@
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"                # Location of your pyproject.toml
+    schedule:
+      interval: "weekly"          # Options: "daily", "weekly", "monthly"
+    allow:
+      - dependency-type: "direct" # Only update direct dependencies (optional)
+    open-pull-requests-limit: 5
