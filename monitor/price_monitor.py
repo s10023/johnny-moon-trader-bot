@@ -179,20 +179,23 @@ def main(live=False, telegram=False):
                 print("❌ Telegram message failed:", e)
 
     else:
-        while True:
-            clear_screen()
-            print("📈 Live Crypto Price Monitor — Buibui Moon Bot\n")
-            headers = [
-                "Symbol",
-                "Last Price",
-                "15m %",
-                "1h %",
-                "Since Asia 8AM",
-                "24h %",
-            ]
-            price_table = get_price_changes(COINS)
-            print(tabulate(price_table, headers=headers, tablefmt="fancy_grid"))
-            time.sleep(5)
+        try:
+            while True:
+                clear_screen()
+                print("📈 Live Crypto Price Monitor — Buibui Moon Bot\n")
+                headers = [
+                    "Symbol",
+                    "Last Price",
+                    "15m %",
+                    "1h %",
+                    "Since Asia 8AM",
+                    "24h %",
+                ]
+                price_table = get_price_changes(COINS)
+                print(tabulate(price_table, headers=headers, tablefmt="fancy_grid"))
+                time.sleep(5)
+        except KeyboardInterrupt:
+            print("\nExiting gracefully. Goodbye!")
 
 
 if __name__ == "__main__":
