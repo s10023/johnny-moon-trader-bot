@@ -223,11 +223,29 @@ Append `:asc` or `:desc` to control the sort direction (defaults to `desc`).
 
 ### ☁️ GitHub Actions (Optional)
 
-The `.github/workflows/monitor.yaml` file can be configured to:
+The `.github/workflows/python-tests.yml` workflow will automatically run all unit tests on every push and pull request to `main`.
 
-- Run position_monitor.py every 15 minutes
+- Tests run on Python 3.11 and 3.12.
+- Both `requirements.txt` and Poetry (`pyproject.toml`) are supported.
+- You'll see test results directly in your PRs and commit checks.
 
-- Send live updates to Telegram
+No extra setup is needed—just push your code!
+
+## 🧪 Running Tests
+
+This project uses [pytest](https://pytest.org/) for unit testing.
+
+To run all tests locally:
+
+```bash
+# If using Poetry
+poetry run pytest
+
+# Or, if using pip/venv
+pytest
+```
+
+All core logic is covered by unit tests in the `tests/` directory.
 
 ### 📌 Coming Soon / Ideas
 
