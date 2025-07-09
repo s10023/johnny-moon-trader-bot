@@ -28,8 +28,8 @@ docker-build:
 
 docker-run-price:
 	@echo "🐳 Running price_monitor in Docker..."
-	docker run --env-file .env $(DOCKER_IMAGE) poetry run python monitor/price_monitor.py
+	docker run --env-file .env $(DOCKER_IMAGE) poetry run python buibui.py monitor price
 
 docker-run-position:
 	@echo "🐳 Running position_monitor in Docker..."
-	docker run --env-file .env $(DOCKER_IMAGE) poetry run python monitor/position_monitor.py
+	docker run --env-file .env $(DOCKER_IMAGE) poetry run python buibui.py monitor position
