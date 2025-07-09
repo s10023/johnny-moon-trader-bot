@@ -114,6 +114,30 @@ Edit `config/coins.json` to define each symbol's leverage and stop-loss percent.
 }
 ```
 
+## 🐳 Docker & Makefile Usage
+
+You can use Docker to run your bot in a consistent environment, and the Makefile provides easy commands for building and running your container.
+
+### Build the Docker image
+
+```bash
+make docker-build
+```
+
+### Run the price monitor in Docker
+
+```bash
+make docker-run-price
+```
+
+### Run the position monitor in Docker
+
+```bash
+make docker-run-position
+```
+
+All commands use your `.env` file for secrets and config.
+
 ## 🛠️ Usage
 
 ### 🧾 Open Multiple Trades (manually)
