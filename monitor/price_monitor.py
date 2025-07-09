@@ -8,6 +8,9 @@ from tabulate import tabulate
 import sys
 from utils.telegram import send_telegram_message
 from monitor import price_lib
+from colorama import Fore, Style, init
+
+init(autoreset=True)
 
 
 def load_config():
@@ -26,6 +29,19 @@ def clear_screen():
     os.system("cls" if os.name == "nt" else "clear")
 
 
+def colorize_pct(pct_str):
+    try:
+        pct = float(pct_str.replace("%", "").replace("+", ""))
+        if pct_str.startswith("+") or pct > 0:
+            return Fore.GREEN + pct_str + Style.RESET_ALL
+        elif pct < 0:
+            return Fore.RED + pct_str + Style.RESET_ALL
+        else:
+            return Fore.YELLOW + pct_str + Style.RESET_ALL
+    except Exception:
+        return pct_str
+
+
 def main(live=False, telegram=False):
     client = get_client()
     coins = load_config()
@@ -34,6 +50,11 @@ def main(live=False, telegram=False):
         print("📈 Crypto Price Snapshot — Buibui Moon Bot\n")
         headers = ["Symbol", "Last Price", "15m %", "1h %", "Since Asia 8AM", "24h %"]
         price_table, invalid_symbols = price_lib.get_price_changes(client, coins)
+        # Colorize percentage columns for terminal output
+        if not telegram:
+            for row in price_table:
+                for idx in [2, 3, 4, 5]:  # percentage columns
+                    row[idx] = colorize_pct(str(row[idx]))
         print(tabulate(price_table, headers=headers, tablefmt="fancy_grid"))
         if invalid_symbols:
             print("\n⚠️  The following symbols had errors:")
@@ -64,6 +85,9 @@ def main(live=False, telegram=False):
                 price_table, invalid_symbols = price_lib.get_price_changes(
                     client, coins
                 )
+                for row in price_table:
+                    for idx in [2, 3, 4, 5]:
+                        row[idx] = colorize_pct(str(row[idx]))
                 print(tabulate(price_table, headers=headers, tablefmt="fancy_grid"))
                 if invalid_symbols:
                     print("\n⚠️  The following symbols had errors:")

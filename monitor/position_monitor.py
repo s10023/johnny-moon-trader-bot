@@ -6,6 +6,9 @@ from tabulate import tabulate
 import argparse
 from utils.telegram import send_telegram_message
 from monitor import position_lib
+from colorama import Fore, Style, init
+
+init(autoreset=True)
 
 
 def load_config():
@@ -24,6 +27,34 @@ def get_client():
 
 def clear_screen():
     os.system("cls" if os.name == "nt" else "clear")
+
+
+def colorize_pct(pct_str):
+    try:
+        pct = float(str(pct_str).replace("%", "").replace("+", ""))
+        if str(pct_str).startswith("+") or pct > 0:
+            return Fore.GREEN + str(pct_str) + Style.RESET_ALL
+        elif pct < 0:
+            return Fore.RED + str(pct_str) + Style.RESET_ALL
+        else:
+            return Fore.YELLOW + str(pct_str) + Style.RESET_ALL
+    except Exception:
+        return str(pct_str)
+
+
+def colorize_dollar(dollar_str):
+    try:
+        value = float(
+            str(dollar_str).replace("$", "").replace(",", "").replace("+", "")
+        )
+        if str(dollar_str).startswith("+") or value > 0:
+            return Fore.GREEN + str(dollar_str) + Style.RESET_ALL
+        elif value < 0:
+            return Fore.RED + str(dollar_str) + Style.RESET_ALL
+        else:
+            return Fore.YELLOW + str(dollar_str) + Style.RESET_ALL
+    except Exception:
+        return str(dollar_str)
 
 
 def display_table(
@@ -75,6 +106,12 @@ def display_table(
         "% to SL",
         "SL USD",
     ]
+    # Colorize columns for terminal output
+    if not telegram:
+        for row in table:
+            row[7] = colorize_dollar(row[7])  # PnL
+            row[8] = colorize_pct(row[8])  # PnL%
+            row[12] = colorize_dollar(row[12])  # SL USD
     print(
         tabulate(
             table,
