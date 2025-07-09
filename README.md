@@ -118,6 +118,8 @@ Edit `config/coins.json` to define each symbol's leverage and stop-loss percent.
 
 You can use Docker to run your bot in a consistent environment, and the Makefile provides easy commands for building and running your container.
 
+> **Note:** Your `.env` file is required for running the bot, but **not required for running tests** (unless your tests require live API keys).
+
 ### Build the Docker image
 
 ```bash
@@ -136,7 +138,25 @@ make docker-run-price
 make docker-run-position
 ```
 
-All commands use your `.env` file for secrets and config.
+### Run tests inside Docker
+
+To run your test suite in the same environment as production:
+
+```bash
+make docker-test
+```
+
+## 🛠️ Makefile Targets
+
+- `make docker-build` — Build the Docker image
+- `make docker-run-price` — Run price monitor in Docker
+- `make docker-run-position` — Run position monitor in Docker
+- `make docker-test` — Run tests inside Docker
+- `make lint` — Run all linters
+- `make lint-md` — Lint Markdown files
+- `make lint-py` — Check Python formatting with black
+- `make format` — Format all code
+- `make format-py` — Format Python code with black
 
 ## 🛠️ Usage
 
@@ -245,13 +265,30 @@ Supported sort keys:
 
 Append `:asc` or `:desc` to control the sort direction (defaults to `desc`).
 
-### ☁️ GitHub Actions (Optional)
+### ☁️ GitHub Actions: Docker-based Continuous Integration
 
-The `.github/workflows/monitor.yaml` file can be configured to:
+Every push and pull request will automatically:
 
-- Run position_monitor.py every 15 minutes
+- Build your Docker image
+- Run all tests inside the Docker container (using the same environment as production)
 
-- Send live updates to Telegram
+You'll see test results directly in your PRs and commit checks, powered by the Docker build workflow.
+
+## 🧪 Running Tests
+
+This project uses [pytest](https://pytest.org/) for unit testing.
+
+To run all tests locally:
+
+```bash
+# If using Poetry
+poetry run pytest
+
+# Or, if using pip/venv
+pytest
+```
+
+All core logic is covered by unit tests in the `tests/` directory.
 
 ### 📌 Coming Soon / Ideas
 

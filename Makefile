@@ -4,7 +4,7 @@ MARKDOWN_FILES = $(shell find . -name "*.md")
 PYTHON_FILES = $(shell find . -name "*.py")
 DOCKER_IMAGE = buibui-bot
 
-.PHONY: lint lint-md lint-py format format-py docker-build docker-run-price docker-run-position
+.PHONY: lint lint-md lint-py format format-py docker-build docker-run-price docker-run-position docker-test
 
 lint: lint-md lint-py
 
@@ -33,3 +33,7 @@ docker-run-price:
 docker-run-position:
 	@echo "🐳 Running position_monitor in Docker..."
 	docker run --env-file .env $(DOCKER_IMAGE) poetry run python monitor/position_monitor.py
+
+docker-test:
+	@echo "🐳 Running tests in Docker..."
+	docker run $(DOCKER_IMAGE) poetry run pytest
