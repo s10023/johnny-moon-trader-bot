@@ -157,14 +157,14 @@ You'll be prompted to enter:
 ### 📈 Monitor Prices
 
 ```bash
-poetry run python monitor/price_monitor.py
+poetry run python buibui.py monitor price
 ```
 
 This will run once and exit by default.
 To run in live refresh mode:
 
 ```bash
-poetry run python monitor/price_monitor.py --live
+poetry run python buibui.py monitor price --live
 ```
 
 It shows:
@@ -192,7 +192,7 @@ Example Output:
 ### 📊 Monitor Positions & PnL
 
 ```bash
-poetry run python monitor/position_monitor.py [--sort key[:asc|desc]]
+poetry run python buibui.py monitor position [--sort key[:asc|desc]]
 ```
 
 Shows:
@@ -229,10 +229,9 @@ Sorting Options:
 - You can now control how the table is sorted using the `--sort` flag.
 
 ```bash
-poetry run python monitor/position_monitor.py --sort pnl_pct:desc   # Sort by highest PnL%
-poetry run python monitor/position_monitor.py --sort sl_usd:asc     # Sort by lowest SL risk
-poetry run python monitor/position_monitor.py --sort default         # Sort by coins.json order (default)
-
+poetry run python buibui.py monitor position --sort pnl_pct:desc   # Sort by highest PnL%
+poetry run python buibui.py monitor position --sort sl_usd:asc     # Sort by lowest SL risk
+poetry run python buibui.py monitor position --sort default        # Sort by coins.json order (default)
 ```
 
 Supported sort keys:
