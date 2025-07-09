@@ -265,15 +265,14 @@ Supported sort keys:
 
 Append `:asc` or `:desc` to control the sort direction (defaults to `desc`).
 
-### ☁️ GitHub Actions (Optional)
+### ☁️ GitHub Actions: Docker-based Continuous Integration
 
-The `.github/workflows/python-tests.yml` workflow will automatically run all unit tests on every push and pull request to `main`.
+Every push and pull request will automatically:
 
-- Tests run on Python 3.11 and 3.12.
-- Both `requirements.txt` and Poetry (`pyproject.toml`) are supported.
-- You'll see test results directly in your PRs and commit checks.
+- Build your Docker image
+- Run all tests inside the Docker container (using the same environment as production)
 
-No extra setup is needed—just push your code!
+You'll see test results directly in your PRs and commit checks, powered by the Docker build workflow.
 
 ## 🧪 Running Tests
 
