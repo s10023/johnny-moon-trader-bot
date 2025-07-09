@@ -118,6 +118,8 @@ Edit `config/coins.json` to define each symbol's leverage and stop-loss percent.
 
 You can use Docker to run your bot in a consistent environment, and the Makefile provides easy commands for building and running your container.
 
+> **Note:** Your `.env` file is required for running the bot, but not for running tests (unless your tests require live API keys).
+
 ### Build the Docker image
 
 ```bash
@@ -136,7 +138,25 @@ make docker-run-price
 make docker-run-position
 ```
 
-All commands use your `.env` file for secrets and config.
+### Run tests inside Docker
+
+To run your test suite in the same environment as production:
+
+```bash
+make docker-test
+```
+
+## 🛠️ Makefile Targets
+
+- `make docker-build` — Build the Docker image
+- `make docker-run-price` — Run price monitor in Docker
+- `make docker-run-position` — Run position monitor in Docker
+- `make docker-test` — Run tests inside Docker
+- `make lint` — Run all linters
+- `make lint-md` — Lint Markdown files
+- `make lint-py` — Check Python formatting with black
+- `make format` — Format all code
+- `make format-py` — Format Python code with black
 
 ## 🛠️ Usage
 
