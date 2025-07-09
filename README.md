@@ -118,7 +118,7 @@ Edit `config/coins.json` to define each symbol's leverage and stop-loss percent.
 
 You can use Docker to run your bot in a consistent environment, and the Makefile provides easy commands for building and running your container.
 
-> **Note:** Your `.env` file is required for running the bot, but not for running tests (unless your tests require live API keys).
+> **Note:** Your `.env` file is required for running the bot, but **not required for running tests** (unless your tests require live API keys).
 
 ### Build the Docker image
 

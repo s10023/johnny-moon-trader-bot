@@ -36,4 +36,4 @@ docker-run-position:
 
 docker-test:
 	@echo "🐳 Running tests in Docker..."
-	docker run --env-file .env $(DOCKER_IMAGE) poetry run pytest
+	docker run $(DOCKER_IMAGE) poetry run pytest
