@@ -8,6 +8,7 @@ import time
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import sys
+from utils.config_validation import validate_coins_config
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils.telegram import send_telegram_message
@@ -31,8 +32,10 @@ sync_binance_time(client)
 
 # Load coin config
 with open("config/coins.json") as f:
-    COINS_CONFIG = json.load(f)
-    COIN_ORDER = list(COINS_CONFIG.keys())
+    coins_config = json.load(f)
+validate_coins_config(coins_config)
+COINS_CONFIG = coins_config
+COIN_ORDER = list(coins_config.keys())
 
 
 def colorize(value, threshold=0):
