@@ -224,12 +224,54 @@ def clear_screen():
     os.system("cls" if os.name == "nt" else "clear")
 
 
-def main(live=False, telegram=False):
+def parse_sort_arg(sort_arg):
+    if not sort_arg:
+        return None, None
+    parts = sort_arg.split(":")
+    col = parts[0]
+    order = parts[1] if len(parts) > 1 else "desc"
+    if col not in sort_key_map:
+        print(
+            f"Invalid sort column: {col}. Valid options: {', '.join(sort_key_map.keys())}"
+        )
+        sys.exit(1)
+    if order not in ("asc", "desc"):
+        print("Sort order must be 'asc' or 'desc'.")
+        sys.exit(1)
+    return col, order
+
+
+def sort_table(table, col, order):
+    idx = sort_key_map[col]
+
+    def parse_value(val):
+        # Remove color codes and % for percentage columns
+        if isinstance(val, str):
+            val = (
+                val.replace("\x1b[32m", "")
+                .replace("\x1b[31m", "")
+                .replace("\x1b[33m", "")
+                .replace("\x1b[0m", "")
+                .replace("%", "")
+            )
+        try:
+            return float(val)
+        except Exception:
+            return val
+
+    return sorted(
+        table, key=lambda row: parse_value(row[idx]), reverse=(order == "desc")
+    )
+
+
+def main(live=False, telegram=False, sort_col=None, sort_order=None):
     if not live:
         clear_screen()
         print("📈 Crypto Price Snapshot — Buibui Moon Bot\n")
         headers = ["Symbol", "Last Price", "15m %", "1h %", "Since Asia 8AM", "24h %"]
         price_table, invalid_symbols = get_price_changes(COINS)
+        if sort_col:
+            price_table = sort_table(price_table, sort_col, sort_order)
         print(tabulate(price_table, headers=headers, tablefmt="fancy_grid"))
 
         if invalid_symbols:
@@ -239,6 +281,8 @@ def main(live=False, telegram=False):
 
         if telegram:
             price_table, _ = get_price_changes(COINS, telegram=True)
+            if sort_col:
+                price_table = sort_table(price_table, sort_col, sort_order)
             plain_table = tabulate(price_table, headers=headers, tablefmt="plain")
             try:
                 send_telegram_message(
@@ -261,6 +305,8 @@ def main(live=False, telegram=False):
                     "24h %",
                 ]
                 price_table, invalid_symbols = get_price_changes(COINS)
+                if sort_col:
+                    price_table = sort_table(price_table, sort_col, sort_order)
                 print(tabulate(price_table, headers=headers, tablefmt="fancy_grid"))
                 if invalid_symbols:
                     print("\n⚠️  The following symbols had errors:")
@@ -277,6 +323,23 @@ if __name__ == "__main__":
     parser.add_argument(
         "--telegram", action="store_true", help="Send output to Telegram"
     )
+    parser.add_argument(
+        "--sort",
+        type=str,
+        default=None,
+        help="Sort table by column[:asc|desc]. Options: change_15m, change_1h, change_asia, change_24h. Example: --sort change_15m:desc",
+    )
     args = parser.parse_args()
 
-    main(live=args.live, telegram=args.telegram)
+    # Map sort keys to column indices
+    sort_key_map = {
+        "change_15m": 2,
+        "change_1h": 3,
+        "change_asia": 4,
+        "change_24h": 5,
+    }
+
+    sort_col, sort_order = parse_sort_arg(args.sort)
+    main(
+        live=args.live, telegram=args.telegram, sort_col=sort_col, sort_order=sort_order
+    )
