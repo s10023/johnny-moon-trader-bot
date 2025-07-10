@@ -272,8 +272,10 @@ def display_progress_bar(current, target, bar_length=30):
     return f"Wallet Target: ${current:,.2f} / ${target:,.2f} |{bar}| {pct*100:.1f}%"
 
 
-def display_table(sort_by="default", descending=True, telegram=False):
+def display_table(sort_by="default", descending=True, telegram=False, hide_empty=False):
     table, total_risk_usd = fetch_open_positions(sort_by, descending)
+    if hide_empty:
+        table = [row for row in table if row[1] != "-"]
     wallet, unrealized = get_wallet_balance()
     total = wallet + unrealized
     unrealized_pct = (unrealized / wallet * 100) if wallet else 0
@@ -334,13 +336,18 @@ def display_table(sort_by="default", descending=True, telegram=False):
             logging.error(f"❌ Telegram message failed: {e}")
 
 
-def main(sort="default", telegram=False):
+def main(sort="default", telegram=False, hide_empty=False):
 
     sort_key, _, sort_dir = sort.partition(":")
     sort_order = sort_dir.lower() != "asc"  # default to descending if not asc
 
     os.system("cls" if os.name == "nt" else "clear")
-    display_table(sort_by=sort_key, descending=sort_order, telegram=telegram)
+    display_table(
+        sort_by=sort_key,
+        descending=sort_order,
+        telegram=telegram,
+        hide_empty=hide_empty,
+    )
 
 
 if __name__ == "__main__":
@@ -353,6 +360,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--telegram", action="store_true", help="Send output to Telegram"
     )
+    parser.add_argument(
+        "--hide-empty", action="store_true", help="Hide symbols with no open positions"
+    )
     args = parser.parse_args()
 
-    main(sort=args.sort, telegram=args.telegram)
+    main(sort=args.sort, telegram=args.telegram, hide_empty=args.hide_empty)
