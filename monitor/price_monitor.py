@@ -13,6 +13,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from utils.config_validation import validate_coins_config
 from utils.telegram import send_telegram_message
 
 # Init colorama
@@ -37,7 +38,9 @@ sync_binance_time(client)
 
 # Load symbols from config
 with open("config/coins.json") as f:
-    COINS = list(json.load(f).keys())
+    coins_config = json.load(f)
+validate_coins_config(coins_config)
+COINS = list(coins_config.keys())
 
 
 # Format % change with color
