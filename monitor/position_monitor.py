@@ -319,6 +319,11 @@ def display_table(sort_by="default", descending=True, telegram=False):
         )
     )
 
+    if sort_by != "default":
+        print(
+            f"🔽 Sorted by: {sort_by} ({'descending' if descending else 'ascending'})\n"
+        )
+
     if telegram:
         summary = (
             f"📌 Open Positions Snapshot\n\n"

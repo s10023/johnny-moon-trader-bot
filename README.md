@@ -204,6 +204,7 @@ Shows:
 - Colorized risk table with per-trade metrics
 
 - Only open positions are shown. Auto-sorted by your `coins.json` order.
+- - **Sort key and direction are now displayed below the table when sorting is active.**
 
 Example Output:
 
@@ -221,6 +222,7 @@ Example Output:
 │ ETHUSDT      │ SHORT  │    20 │ 2616.17 │ 2550.10 │              591.11 │              11,822.3 │ 306.29 │ +51.82%  │ 52.54%  │    2614.80 │ +0.05%    │ $6.18    │
 ╘══════════════╧════════╧═══════╧═════════╧═════════╧═════════════════════╧═══════════════════════╧════════╧══════════╧═════════╧════════════╧═══════════╧══════════╛
 
+🔽 Sorted by: pnl_pct (descending)
 
 ```
 
