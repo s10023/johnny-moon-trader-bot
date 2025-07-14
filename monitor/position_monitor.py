@@ -8,6 +8,8 @@ import time
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import sys
+import pandas as pd
+import pandas_ta as ta
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils.telegram import send_telegram_message
@@ -105,7 +107,68 @@ def get_stop_loss_for_symbol(symbol):
     return None
 
 
-def fetch_open_positions(sort_by="default", descending=True):
+def fetch_klines_df(symbol, interval, limit=100):
+    try:
+        klines = client.get_klines(symbol=symbol, interval=interval, limit=limit)
+        if not klines:
+            return None
+        # Only set columns if klines is not empty
+        df = pd.DataFrame(klines)
+        df.columns = [
+            "open_time",
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "close_time",
+            "quote_asset_volume",
+            "number_of_trades",
+            "taker_buy_base_asset_volume",
+            "taker_buy_quote_asset_volume",
+            "ignore",
+        ]
+        df["open"] = df["open"].astype(float)
+        df["high"] = df["high"].astype(float)
+        df["low"] = df["low"].astype(float)
+        df["close"] = df["close"].astype(float)
+        df["volume"] = df["volume"].astype(float)
+        return df
+    except Exception as e:
+        logging.error(f"Error fetching klines for {symbol} [{interval}]: {e}")
+        return None
+
+
+def calculate_indicators(df):
+    if df is None or df.empty:
+        return None, None, None
+    df["rsi"] = ta.rsi(df["close"], length=14)
+    macd = ta.macd(df["close"])
+    if isinstance(macd, pd.DataFrame) and not macd.empty:
+        df = pd.concat([df, macd], axis=1)
+    rsi_isnull = bool(df["rsi"].isnull().all())
+    latest_rsi = df["rsi"].iloc[-1] if not rsi_isnull else None
+    latest_macd = df["MACD_12_26_9"].iloc[-1] if "MACD_12_26_9" in df else None
+    latest_macdsignal = df["MACDs_12_26_9"].iloc[-1] if "MACDs_12_26_9" in df else None
+    return latest_rsi, latest_macd, latest_macdsignal
+
+
+def get_alerts(rsi, macd, macdsignal, tf_label):
+    alerts = []
+    if rsi is not None:
+        if rsi > 70:
+            alerts.append(f"{tf_label} RSI Overbought")
+        elif rsi < 30:
+            alerts.append(f"{tf_label} RSI Oversold")
+    if macd is not None and macdsignal is not None:
+        if macd > macdsignal:
+            alerts.append(f"{tf_label} MACD Bullish")
+        elif macd < macdsignal:
+            alerts.append(f"{tf_label} MACD Bearish")
+    return alerts
+
+
+def fetch_open_positions(sort_by="default", descending=True, show_indicators=True):
 
     positions = client.futures_position_information()
     filtered = []
@@ -200,6 +263,20 @@ def fetch_open_positions(sort_by="default", descending=True):
         )
         if sl_risk_usd:
             total_risk_usd += sl_risk_usd
+        # --- Indicator Alerts ---
+        alerts_str = ""
+        if show_indicators:
+            indicator_timeframes = [
+                ("15m", "15m", 100),
+                ("1h", "1h", 100),
+                ("4h", "4h", 100),
+            ]
+            alerts = []
+            for tf, tf_label, limit in indicator_timeframes:
+                df = fetch_klines_df(symbol, tf, limit=limit)
+                rsi, macd, macdsignal = calculate_indicators(df)
+                alerts.extend(get_alerts(rsi, macd, macdsignal, tf_label))
+            alerts_str = "; ".join(alerts)
         row = [
             symbol,  # 0
             side_colored,  # 1
@@ -215,6 +292,8 @@ def fetch_open_positions(sort_by="default", descending=True):
             sl_size_str,  # 11
             sl_usd_str,  # 12
         ]
+        if show_indicators:
+            row.append(alerts_str)
         # Append extra values at the end for sorting (not shown)
         row.append(pnl_pct)  # index 13
         row.append(sl_risk_usd)  # index 14
@@ -272,8 +351,12 @@ def display_progress_bar(current, target, bar_length=30):
     return f"Wallet Target: ${current:,.2f} / ${target:,.2f} |{bar}| {pct*100:.1f}%"
 
 
-def display_table(sort_by="default", descending=True, telegram=False):
-    table, total_risk_usd = fetch_open_positions(sort_by, descending)
+def display_table(
+    sort_by="default", descending=True, telegram=False, show_indicators=True
+):
+    table, total_risk_usd = fetch_open_positions(
+        sort_by, descending, show_indicators=show_indicators
+    )
     wallet, unrealized = get_wallet_balance()
     total = wallet + unrealized
     unrealized_pct = (unrealized / wallet * 100) if wallet else 0
@@ -308,6 +391,8 @@ def display_table(sort_by="default", descending=True, telegram=False):
         "% to SL",
         "SL USD",
     ]
+    if show_indicators:
+        headers.append("Alerts")
 
     print(
         tabulate(
@@ -334,13 +419,18 @@ def display_table(sort_by="default", descending=True, telegram=False):
             logging.error(f"❌ Telegram message failed: {e}")
 
 
-def main(sort="default", telegram=False):
+def main(sort="default", telegram=False, show_indicators=True):
 
     sort_key, _, sort_dir = sort.partition(":")
     sort_order = sort_dir.lower() != "asc"  # default to descending if not asc
 
     os.system("cls" if os.name == "nt" else "clear")
-    display_table(sort_by=sort_key, descending=sort_order, telegram=telegram)
+    display_table(
+        sort_by=sort_key,
+        descending=sort_order,
+        telegram=telegram,
+        show_indicators=show_indicators,
+    )
 
 
 if __name__ == "__main__":
@@ -353,6 +443,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--telegram", action="store_true", help="Send output to Telegram"
     )
+    parser.add_argument(
+        "--hide-indicators",
+        action="store_true",
+        help="Hide indicator alerts column (RSI/MACD)",
+    )
     args = parser.parse_args()
 
-    main(sort=args.sort, telegram=args.telegram)
+    main(
+        sort=args.sort, telegram=args.telegram, show_indicators=not args.hide_indicators
+    )

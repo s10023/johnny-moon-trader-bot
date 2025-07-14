@@ -11,6 +11,8 @@ from colorama import init, Fore, Style
 import logging
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import pandas as pd
+import pandas_ta as ta
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils.telegram import send_telegram_message
@@ -130,6 +132,64 @@ def get_open_price_asia(symbol):
         return None
 
 
+def fetch_klines_df(symbol, interval, limit=150):
+    try:
+        klines = client.get_klines(symbol=symbol, interval=interval, limit=limit)
+        df = pd.DataFrame(
+            klines,
+            columns=[
+                "open_time",
+                "open",
+                "high",
+                "low",
+                "close",
+                "volume",
+                "close_time",
+                "quote_asset_volume",
+                "number_of_trades",
+                "taker_buy_base_asset_volume",
+                "taker_buy_quote_asset_volume",
+                "ignore",
+            ],
+        )
+        df["open"] = df["open"].astype(float)
+        df["high"] = df["high"].astype(float)
+        df["low"] = df["low"].astype(float)
+        df["close"] = df["close"].astype(float)
+        df["volume"] = df["volume"].astype(float)
+        return df
+    except Exception as e:
+        logging.error(f"Error fetching klines for {symbol} [{interval}]: {e}")
+        return None
+
+
+def calculate_indicators(df):
+    if df is None or df.empty:
+        return None, None, None
+    df["rsi"] = ta.rsi(df["close"], length=14)
+    macd = ta.macd(df["close"])
+    df = pd.concat([df, macd], axis=1)
+    latest_rsi = df["rsi"].iloc[-1] if not df["rsi"].isnull().all() else None
+    latest_macd = df["MACD_12_26_9"].iloc[-1] if "MACD_12_26_9" in df else None
+    latest_macdsignal = df["MACDs_12_26_9"].iloc[-1] if "MACDs_12_26_9" in df else None
+    return latest_rsi, latest_macd, latest_macdsignal
+
+
+def get_alerts(rsi, macd, macdsignal, tf_label):
+    alerts = []
+    if rsi is not None:
+        if rsi > 70:
+            alerts.append(f"{tf_label} RSI Overbought")
+        elif rsi < 30:
+            alerts.append(f"{tf_label} RSI Oversold")
+    if macd is not None and macdsignal is not None:
+        if macd > macdsignal:
+            alerts.append(f"{tf_label} MACD Bullish")
+        elif macd < macdsignal:
+            alerts.append(f"{tf_label} MACD Bearish")
+    return alerts
+
+
 def get_price_changes(symbols, telegram=False):
     table = []
     invalid_symbols = set()
@@ -139,7 +199,7 @@ def get_price_changes(symbols, telegram=False):
         ticker_map = {t["symbol"]: t for t in all_tickers}
     except Exception as e:
         logging.error(f"Error fetching all tickers: {e}")
-        return [[symbol, "Error", "", "", "", ""] for symbol in symbols], set()
+        return [[symbol, "Error", "", "", "", "", ""] for symbol in symbols], set()
 
     # Batch fetch klines for all symbols
     intervals_lookbacks = [("15m", 15), ("1h", 60)]
@@ -161,12 +221,15 @@ def get_price_changes(symbols, telegram=False):
 
     asia_open_map = get_asia_open_parallel(symbols)
 
+    # --- New: Indicator timeframes ---
+    indicator_timeframes = [("15m", "15m", 100), ("1h", "1h", 100), ("4h", "4h", 100)]
+
     for symbol in symbols:
         try:
             ticker = ticker_map.get(symbol)
             if not ticker:
                 invalid_symbols.add((symbol, "Ticker not found"))
-                table.append([symbol, "Error", "", "", "", ""])
+                table.append([symbol, "Error", "", "", "", "", ""])
                 continue
 
             last_price = float(ticker["lastPrice"])
@@ -187,6 +250,14 @@ def get_price_changes(symbols, telegram=False):
                 ((last_price - asia_open) / asia_open) * 100 if asia_open else 0
             )
 
+            # --- New: Indicator alerts ---
+            alerts = []
+            for tf, tf_label, limit in indicator_timeframes:
+                df = fetch_klines_df(symbol, tf, limit=limit)
+                rsi, macd, macdsignal = calculate_indicators(df)
+                alerts.extend(get_alerts(rsi, macd, macdsignal, tf_label))
+            alerts_str = "; ".join(alerts)
+
             if telegram:
                 table.append(
                     [
@@ -196,6 +267,7 @@ def get_price_changes(symbols, telegram=False):
                         format_pct_simple(change_1h),
                         format_pct_simple(change_asia),
                         format_pct_simple(change_24h),
+                        alerts_str,
                     ]
                 )
             else:
@@ -207,6 +279,7 @@ def get_price_changes(symbols, telegram=False):
                         format_pct(change_1h),
                         format_pct(change_asia),
                         format_pct(change_24h),
+                        alerts_str,
                     ]
                 )
         except Exception as e:
@@ -215,8 +288,7 @@ def get_price_changes(symbols, telegram=False):
                 invalid_symbols.add((symbol, "Invalid symbol"))
             else:
                 invalid_symbols.add((symbol, msg))
-            # logging.error(f"Error in get_price_changes for {symbol}: {e}")
-            table.append([symbol, "Error", "", "", "", ""])
+            table.append([symbol, "Error", "", "", "", "", ""])
     return table, invalid_symbols
 
 
@@ -227,8 +299,16 @@ def clear_screen():
 def main(live=False, telegram=False):
     if not live:
         clear_screen()
-        print("📈 Crypto Price Snapshot — Buibui Moon Bot\n")
-        headers = ["Symbol", "Last Price", "15m %", "1h %", "Since Asia 8AM", "24h %"]
+        print("\U0001f4c8 Crypto Price Snapshot — Buibui Moon Bot\n")
+        headers = [
+            "Symbol",
+            "Last Price",
+            "15m %",
+            "1h %",
+            "Since Asia 8AM",
+            "24h %",
+            "Alerts",
+        ]
         price_table, invalid_symbols = get_price_changes(COINS)
         print(tabulate(price_table, headers=headers, tablefmt="fancy_grid"))
 
@@ -259,6 +339,7 @@ def main(live=False, telegram=False):
                     "1h %",
                     "Since Asia 8AM",
                     "24h %",
+                    "Alerts",
                 ]
                 price_table, invalid_symbols = get_price_changes(COINS)
                 print(tabulate(price_table, headers=headers, tablefmt="fancy_grid"))
