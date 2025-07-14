@@ -8,11 +8,12 @@ import time
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import sys
+from utils.config_validation import validate_coins_config
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils.telegram import send_telegram_message
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s:%(message)s")
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s:%(message)s")
 
 
 def sync_binance_time(client):
@@ -30,9 +31,18 @@ client = Client(API_KEY, API_SECRET)
 sync_binance_time(client)
 
 # Load coin config
-with open("config/coins.json") as f:
-    COINS_CONFIG = json.load(f)
-    COIN_ORDER = list(COINS_CONFIG.keys())
+try:
+    with open("config/coins.json") as f:
+        coins_config = json.load(f)
+    validate_coins_config(coins_config)
+    COINS_CONFIG = coins_config
+    COIN_ORDER = list(coins_config.keys())
+except json.JSONDecodeError as e:
+    logging.error(f"JSON decode error in config/coins.json: {e}")
+    sys.exit(1)
+except Exception as e:
+    logging.error(f"Error loading config/coins.json: {e}")
+    sys.exit(1)
 
 
 def colorize(value, threshold=0):
