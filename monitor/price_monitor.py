@@ -33,7 +33,6 @@ def sync_binance_time(client):
     client.TIME_OFFSET = server_time - local_time
 
 
-
 client = Client(API_KEY, API_SECRET)
 sync_binance_time(client)
 
