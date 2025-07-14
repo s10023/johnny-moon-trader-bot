@@ -24,7 +24,7 @@ load_dotenv()
 API_KEY = os.getenv("BINANCE_API_KEY")
 API_SECRET = os.getenv("BINANCE_API_SECRET")
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s:%(message)s")
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s:%(message)s")
 
 
 def sync_binance_time(client):
@@ -33,14 +33,22 @@ def sync_binance_time(client):
     client.TIME_OFFSET = server_time - local_time
 
 
+
 client = Client(API_KEY, API_SECRET)
 sync_binance_time(client)
 
 # Load symbols from config
-with open("config/coins.json") as f:
-    coins_config = json.load(f)
-validate_coins_config(coins_config)
-COINS = list(coins_config.keys())
+try:
+    with open("config/coins.json") as f:
+        coins_config = json.load(f)
+    validate_coins_config(coins_config)
+    COINS = list(coins_config.keys())
+except json.JSONDecodeError as e:
+    logging.error(f"JSON decode error in config/coins.json: {e}")
+    sys.exit(1)
+except Exception as e:
+    logging.error(f"Error loading config/coins.json: {e}")
+    sys.exit(1)
 
 
 # Format % change with color
