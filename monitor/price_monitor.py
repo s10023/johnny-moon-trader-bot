@@ -13,6 +13,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import pandas as pd
 import pandas_ta as ta
+from utils.indicators import fetch_klines_df, calculate_indicators, get_alerts
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils.config_validation import validate_coins_config
@@ -142,64 +143,6 @@ def get_open_price_asia(symbol):
         return None
 
 
-def fetch_klines_df(symbol, interval, limit=150):
-    try:
-        klines = client.get_klines(symbol=symbol, interval=interval, limit=limit)
-        df = pd.DataFrame(
-            klines,
-            columns=[
-                "open_time",
-                "open",
-                "high",
-                "low",
-                "close",
-                "volume",
-                "close_time",
-                "quote_asset_volume",
-                "number_of_trades",
-                "taker_buy_base_asset_volume",
-                "taker_buy_quote_asset_volume",
-                "ignore",
-            ],
-        )
-        df["open"] = df["open"].astype(float)
-        df["high"] = df["high"].astype(float)
-        df["low"] = df["low"].astype(float)
-        df["close"] = df["close"].astype(float)
-        df["volume"] = df["volume"].astype(float)
-        return df
-    except Exception as e:
-        logging.error(f"Error fetching klines for {symbol} [{interval}]: {e}")
-        return None
-
-
-def calculate_indicators(df):
-    if df is None or df.empty:
-        return None, None, None
-    df["rsi"] = ta.rsi(df["close"], length=14)
-    macd = ta.macd(df["close"])
-    df = pd.concat([df, macd], axis=1)
-    latest_rsi = df["rsi"].iloc[-1] if not df["rsi"].isnull().all() else None
-    latest_macd = df["MACD_12_26_9"].iloc[-1] if "MACD_12_26_9" in df else None
-    latest_macdsignal = df["MACDs_12_26_9"].iloc[-1] if "MACDs_12_26_9" in df else None
-    return latest_rsi, latest_macd, latest_macdsignal
-
-
-def get_alerts(rsi, macd, macdsignal, tf_label):
-    alerts = []
-    if rsi is not None:
-        if rsi > 70:
-            alerts.append(f"{tf_label} RSI Overbought")
-        elif rsi < 30:
-            alerts.append(f"{tf_label} RSI Oversold")
-    if macd is not None and macdsignal is not None:
-        if macd > macdsignal:
-            alerts.append(f"{tf_label} MACD Bullish")
-        elif macd < macdsignal:
-            alerts.append(f"{tf_label} MACD Bearish")
-    return alerts
-
-
 def get_price_changes(symbols, telegram=False):
     table = []
     invalid_symbols = set()
@@ -263,7 +206,7 @@ def get_price_changes(symbols, telegram=False):
             # --- New: Indicator alerts ---
             alerts = []
             for tf, tf_label, limit in indicator_timeframes:
-                df = fetch_klines_df(symbol, tf, limit=limit)
+                df = fetch_klines_df(client, symbol, tf, limit=limit)
                 rsi, macd, macdsignal = calculate_indicators(df)
                 alerts.extend(get_alerts(rsi, macd, macdsignal, tf_label))
             alerts_str = "; ".join(alerts)
