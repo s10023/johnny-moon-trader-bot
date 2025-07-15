@@ -11,6 +11,7 @@ from colorama import init, Fore, Style
 import logging
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import re
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils.config_validation import validate_coins_config
@@ -257,13 +258,8 @@ def sort_table(table, col, order):
     def parse_value(val):
         # Remove color codes and % for percentage columns
         if isinstance(val, str):
-            val = (
-                val.replace("\x1b[32m", "")
-                .replace("\x1b[31m", "")
-                .replace("\x1b[33m", "")
-                .replace("\x1b[0m", "")
-                .replace("%", "")
-            )
+            val = re.sub(r"\x1b\[[0-9;]*m", "", val)  # Remove ANSI codes
+            val = val.replace("%", "")
         try:
             return float(val)
         except Exception:
@@ -281,6 +277,7 @@ def main(live=False, telegram=False, sort_col=None, sort_order=None):
         headers = ["Symbol", "Last Price", "15m %", "1h %", "Since Asia 8AM", "24h %"]
         price_table, invalid_symbols = get_price_changes(COINS)
         if sort_col:
+            print(f"[DEBUG] Sorting by: {sort_col} {sort_order}")
             price_table = sort_table(price_table, sort_col, sort_order)
         print(tabulate(price_table, headers=headers, tablefmt="fancy_grid"))
 
@@ -342,11 +339,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Map sort keys to column indices
+    headers = ["Symbol", "Last Price", "15m %", "1h %", "Since Asia 8AM", "24h %"]
     sort_key_map = {
-        "change_15m": 2,
-        "change_1h": 3,
-        "change_asia": 4,
-        "change_24h": 5,
+        "change_15m": headers.index("15m %"),
+        "change_1h": headers.index("1h %"),
+        "change_asia": headers.index("Since Asia 8AM"),
+        "change_24h": headers.index("24h %"),
     }
 
     sort_col, sort_order = parse_sort_arg(args.sort)
