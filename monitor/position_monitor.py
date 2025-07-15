@@ -285,7 +285,7 @@ def display_progress_bar(current, target, bar_length=30):
 def display_table(sort_by="default", descending=True, telegram=False, hide_empty=False):
     table, total_risk_usd = fetch_open_positions(sort_by, descending)
     if hide_empty:
-        table = [row for row in table if row[1] != "-"]
+        table = [row for row in table if row[1].strip() != "-"]
     wallet, unrealized = get_wallet_balance()
     total = wallet + unrealized
     unrealized_pct = (unrealized / wallet * 100) if wallet else 0
