@@ -289,9 +289,14 @@ def display_progress_bar(current: float, target: float, bar_length: int = 30) ->
 
 
 def display_table(
-    sort_by: str = "default", descending: bool = True, telegram: bool = False
+    sort_by: str = "default",
+    descending: bool = True,
+    telegram: bool = False,
+    hide_empty: bool = False,
 ) -> str:
     table, total_risk_usd = fetch_open_positions(sort_by, descending)
+    if hide_empty:
+        table = [row for row in table if row[1].strip() != "-"]
     wallet, unrealized = get_wallet_balance()
     total = wallet + unrealized
     unrealized_pct = (unrealized / wallet * 100) if wallet else 0
@@ -349,13 +354,22 @@ def display_table(
     return "\n".join(output)
 
 
-def main(sort: str = "default", telegram: bool = False) -> None:
+def main(
+    sort: str = "default", telegram: bool = False, hide_empty: bool = False
+) -> None:
 
     sort_key, _, sort_dir = sort.partition(":")
     sort_order = sort_dir.lower() != "asc"  # default to descending if not asc
 
     os.system("cls" if os.name == "nt" else "clear")
-    print(display_table(sort_by=sort_key, descending=sort_order, telegram=telegram))
+    print(
+        display_table(
+            sort_by=sort_key,
+            descending=sort_order,
+            telegram=telegram,
+            hide_empty=hide_empty,
+        )
+    )
 
 
 if __name__ == "__main__":
@@ -368,6 +382,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--telegram", action="store_true", help="Send output to Telegram"
     )
+    parser.add_argument(
+        "--hide-empty", action="store_true", help="Hide symbols with no open positions"
+    )
     args = parser.parse_args()
 
-    main(sort=args.sort, telegram=args.telegram)
+    main(sort=args.sort, telegram=args.telegram, hide_empty=args.hide_empty)
