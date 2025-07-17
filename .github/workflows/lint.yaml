@@ -44,3 +44,6 @@ jobs:
 
       - name: Lint Python files with black
         run: poetry run black --check .
+
+      - name: Type check with mypy
+        run: poetry run mypy .

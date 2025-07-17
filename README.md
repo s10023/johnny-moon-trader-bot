@@ -261,3 +261,22 @@ The `.github/workflows/monitor.yaml` file can be configured to:
 - Visual dashboard (web UI or terminal rich)
 
 - Funding rate monitor + reversal detector
+
+## 🧹 Linting & Type Checking
+
+This project uses:
+
+- **black** for code formatting
+- **mypy** for static type checking
+
+To check formatting and types locally:
+
+```bash
+poetry run black --check .
+poetry run mypy .
+```
+
+## 🛡️ Continuous Integration
+
+Every push and pull request runs automated checks (linting, formatting, and type checking) via GitHub Actions.  
+You can find the workflow in `.github/workflows/lint.yaml`.
